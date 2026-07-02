@@ -1,0 +1,86 @@
+# Full stack: nginx (TLS termination + cert acquisition) + docker-mailserver
+# (SMTP/IMAP) + mail-api (control plane). Configure via root `.env` (see
+# `.env.example`).
+
+services:
+  nginx:
+    image: jonasal/nginx-certbot:6-alpine
+    restart: unless-stopped
+    container_name: nginx
+    env_file:
+      - ./nginx/nginx-certbot.env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - nginx_secrets:/etc/letsencrypt
+      - ./nginx/user_conf.d:/etc/nginx/user_conf.d
+      # mail-api writes per-domain vhosts here (Phase 8)
+      - ./mailserver-api/data/nginx-generated:/etc/nginx/user_conf.d/generated
+    networks:
+      - web_network
+
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:15.1.0
+    container_name: mailserver
+    hostname: ${MAIL_HOSTNAME:-mail.example.com}
+    env_file:
+      - ./.env
+    ports:
+      - "25:25"
+      - "465:465"
+      - "587:587"
+      - "993:993"
+    volumes:
+      - ./docker-data/dms/mail-data/:/var/mail/
+      - ./docker-data/dms/mail-state/:/var/mail-state/
+      - ./docker-data/dms/mail-logs/:/var/log/mail/
+      - ./docker-data/dms/config/:/tmp/docker-mailserver/
+      - nginx_secrets:/etc/letsencrypt:ro
+      - /etc/localtime:/etc/localtime:ro
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+    stop_grace_period: 1m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - web_network
+
+  mail-api:
+    build: ./mailserver-api
+    container_name: mail-api
+    restart: unless-stopped
+    env_file:
+      - ./mailserver-api/.env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=/app/data/data.db
+      - NGINX_GENERATED_DIR=/app/nginx-generated
+      - DMS_CONTAINER_NAME=mailserver
+      - NGINX_CONTAINER_NAME=nginx
+      - DOCKER_SOCKET_PATH=/var/run/docker.sock
+      - TRUST_PROXY=1
+    volumes:
+      - ./mailserver-api/data:/app/data
+      - ./mailserver-api/data/nginx-generated:/app/nginx-generated
+      # docker.sock = root on host. Use docker-socket-proxy for prod (see _docs/deployment.md).
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - web_network
+    depends_on:
+      - mailserver
+      - nginx
+
+volumes:
+  nginx_secrets:
+    external: true
+    name: nginx_nginx_secrets
+
+networks:
+  web_network:
+    driver: bridge
+    name: web_network

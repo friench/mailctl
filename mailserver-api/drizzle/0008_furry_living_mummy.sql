@@ -1,0 +1,2 @@
+CREATE INDEX `send_jobs_status_completed_idx` ON `send_jobs` (`status`,`completed_at`);--> statement-breakpoint
+CREATE INDEX `webhook_deliveries_status_completed_idx` ON `webhook_deliveries` (`status`,`completed_at`);

@@ -1,0 +1,37 @@
+# Dependencies
+mailserver-api/node_modules/
+mailserver-api/ui/node_modules/
+
+# Build output
+mailserver-api/dist/
+mailserver-api/ui/dist/
+mailserver-api/coverage/
+
+# Environment files (contain secrets)
+.env
+mailserver-api/.env
+nginx/nginx-certbot.env
+
+# Persistent state
+mailserver-api/data/
+docker-data/
+
+# Generated nginx vhosts (Phase 8 — created by mail-api at runtime)
+mailserver-api/data/nginx-generated/
+
+# Let's Encrypt / certbot
+nginx/nginx_secrets/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Claude Code runtime
+.claude/scheduled_tasks.lock
+.claude/*.lock

@@ -1,0 +1,41 @@
+# Standalone compose. Production: integrate into root docker-compose.yml.
+services:
+  mail-api:
+    build: .
+    container_name: mail-api
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3050:3050'
+    environment:
+      - NODE_ENV=production
+      - PORT=3050
+      - HOST=0.0.0.0
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DATABASE_URL=/app/data/data.db
+      # Mailbox provisioning: API needs to invoke `setup` inside the DMS container.
+      # docker.sock = root-equivalent privileges. Consider docker-socket-proxy in production.
+      - DMS_CONTAINER_NAME=${DMS_CONTAINER_NAME:-mailserver}
+      - DOCKER_SOCKET_PATH=/var/run/docker.sock
+      - NGINX_CONTAINER_NAME=${NGINX_CONTAINER_NAME:-nginx}
+      - NGINX_GENERATED_DIR=/app/nginx-generated
+      - NGINX_RELOAD_ENABLED=${NGINX_RELOAD_ENABLED:-true}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL:-}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:-}
+      - MAIL_PASS_NOREPLY=${MAIL_PASS_NOREPLY:-}
+      - MAIL_USER_RELAY1=${MAIL_USER_RELAY1:-}
+      - MAIL_PASS_RELAY1=${MAIL_PASS_RELAY1:-}
+      - MAIL_USER_RELAY2=${MAIL_USER_RELAY2:-}
+      - MAIL_PASS_RELAY2=${MAIL_PASS_RELAY2:-}
+    volumes:
+      - ./data:/app/data
+      # nginx-generated/ should also be mounted into the nginx container
+      # at /etc/nginx/user_conf.d/generated/ so vhosts are picked up.
+      - ./nginx-generated:/app/nginx-generated
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - mailserver_default
+
+networks:
+  mailserver_default:
+    external: true

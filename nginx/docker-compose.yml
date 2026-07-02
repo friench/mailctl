@@ -1,0 +1,23 @@
+services:
+  nginx:
+    image: jonasal/nginx-certbot:6-alpine
+    restart: unless-stopped
+    container_name: nginx
+    env_file:
+      - ./nginx-certbot.env
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - nginx_secrets:/etc/letsencrypt
+      - ./user_conf.d:/etc/nginx/user_conf.d
+    networks:
+      - web_network
+
+networks:
+  web_network:
+    driver: bridge
+    name: web_network
+
+volumes:
+  nginx_secrets:

@@ -1,0 +1,350 @@
+#!/usr/bin/env node
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z, type ZodRawShape } from 'zod';
+import { MailApiClient, MailApiError, seg } from './client.js';
+
+const baseUrl = process.env.MAIL_API_URL ?? 'http://localhost:3050';
+const apiKey = process.env.MAIL_API_KEY;
+if (!apiKey) {
+  console.error('MAIL_API_KEY is required (an admin-scoped mail-api key, ideally with send too).');
+  process.exit(1);
+}
+
+const client = new MailApiClient({ baseUrl, apiKey });
+const server = new McpServer({ name: 'mailserver-mcp', version: '0.1.0' });
+
+type ToolResult = {
+  content: Array<{ type: 'text'; text: string }>;
+  isError?: boolean;
+};
+
+function ok(data: unknown): ToolResult {
+  const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+  return { content: [{ type: 'text', text }] };
+}
+
+function fail(err: unknown): ToolResult {
+  if (err instanceof MailApiError) {
+    return {
+      content: [{ type: 'text', text: `mail-api error ${err.status}: ${err.message}` }],
+      isError: true,
+    };
+  }
+  return {
+    content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+    isError: true,
+  };
+}
+
+interface ToolMeta {
+  title: string;
+  description: string;
+  readOnly?: boolean;
+  destructive?: boolean;
+}
+
+function register<S extends ZodRawShape>(
+  name: string,
+  meta: ToolMeta,
+  shape: S,
+  handler: (args: z.infer<z.ZodObject<S>>) => Promise<unknown>,
+): void {
+  const callback = async (args: z.infer<z.ZodObject<S>>): Promise<ToolResult> => {
+    try {
+      return ok(await handler(args));
+    } catch (err) {
+      return fail(err);
+    }
+  };
+  server.registerTool(
+    name,
+    {
+      title: meta.title,
+      description: meta.description,
+      inputSchema: shape,
+      annotations: {
+        title: meta.title,
+        readOnlyHint: meta.readOnly ?? false,
+        destructiveHint: meta.destructive ?? false,
+      },
+    },
+    // The SDK's callback type is a conditional over the schema; our generic
+    // wrapper can't express it, so cast the (already type-safe) callback.
+    callback as Parameters<typeof server.registerTool>[2],
+  );
+}
+
+const attachmentShape = z.object({
+  filename: z.string(),
+  content: z.string().describe('base64-encoded file content'),
+  contentType: z.string().optional(),
+});
+
+// ---- send / jobs ----
+register(
+  'send_email',
+  { title: 'Send email', description: 'Enqueue an outbound email via mail-api (POST /send).' },
+  {
+    to: z.string().describe('Recipient(s), comma-separated'),
+    subject: z.string(),
+    html: z.string(),
+    text: z.string().optional(),
+    replyTo: z.string().optional(),
+    from: z.string().optional().describe('Must match an active SMTP account from-address'),
+    attachments: z.array(attachmentShape).max(10).optional(),
+    wait: z.boolean().optional().describe('Block until the job finishes (?wait=true)'),
+  },
+  ({ wait, ...body }) => client.post(`/send${wait ? '?wait=true' : ''}`, body),
+);
+
+register(
+  'get_send_job',
+  { title: 'Get send job', description: 'Get the status of a send job (GET /jobs/:id).', readOnly: true },
+  { id: z.string() },
+  ({ id }) => client.get(`/jobs/${seg(id)}`),
+);
+
+register(
+  'list_send_jobs',
+  { title: 'List send jobs', description: 'List recent send jobs (GET /jobs).', readOnly: true },
+  {},
+  () => client.get('/jobs'),
+);
+
+// ---- domains ----
+register(
+  'list_domains',
+  { title: 'List domains', description: 'List all domains (GET /admin/api/domains).', readOnly: true },
+  {},
+  () => client.get('/admin/api/domains'),
+);
+
+register(
+  'create_domain',
+  { title: 'Create domain', description: 'Register a domain (POST /admin/api/domains).' },
+  { name: z.string(), dkimSelector: z.string().optional() },
+  (body) => client.post('/admin/api/domains', body),
+);
+
+register(
+  'generate_dkim',
+  { title: 'Generate DKIM', description: 'Generate/regenerate a DKIM key for a domain.' },
+  { id: z.string(), selector: z.string().optional(), keysize: z.union([z.literal(2048), z.literal(4096)]).optional() },
+  ({ id, ...body }) => client.post(`/admin/api/domains/${seg(id)}/dkim`, body),
+);
+
+register(
+  'dns_check',
+  { title: 'DNS check', description: 'Check SPF/DKIM/DMARC/MX/A DNS records for a domain.', readOnly: true },
+  { id: z.string() },
+  ({ id }) => client.get(`/admin/api/domains/${seg(id)}/dns-check`),
+);
+
+// ---- mailboxes ----
+register(
+  'list_mailboxes',
+  { title: 'List mailboxes', description: 'List mailboxes (GET /admin/api/mailboxes).', readOnly: true },
+  {},
+  () => client.get('/admin/api/mailboxes'),
+);
+
+register(
+  'create_mailbox',
+  { title: 'Create mailbox', description: 'Create a mailbox in DMS + DB (POST /admin/api/mailboxes).' },
+  { address: z.string(), password: z.string(), quotaMb: z.number().int().positive().optional() },
+  (body) => client.post('/admin/api/mailboxes', body),
+);
+
+register(
+  'set_mailbox_password',
+  { title: 'Set mailbox password', description: 'Change a mailbox password.' },
+  { id: z.string(), password: z.string() },
+  ({ id, password }) => client.patch(`/admin/api/mailboxes/${seg(id)}/password`, { password }),
+);
+
+register(
+  'delete_mailbox',
+  { title: 'Delete mailbox', description: 'Delete a mailbox from DMS + DB.', destructive: true },
+  { id: z.string() },
+  ({ id }) => client.delete(`/admin/api/mailboxes/${seg(id)}`),
+);
+
+// ---- aliases ----
+register(
+  'list_aliases',
+  { title: 'List aliases', description: 'List aliases (GET /admin/api/aliases).', readOnly: true },
+  {},
+  () => client.get('/admin/api/aliases'),
+);
+
+register(
+  'create_alias',
+  { title: 'Create alias', description: 'Create an alias in DMS + DB.' },
+  { address: z.string(), target: z.string().describe('Target address(es), comma-separated') },
+  (body) => client.post('/admin/api/aliases', body),
+);
+
+register(
+  'delete_alias',
+  { title: 'Delete alias', description: 'Delete an alias from DMS + DB.', destructive: true },
+  { id: z.string() },
+  ({ id }) => client.delete(`/admin/api/aliases/${seg(id)}`),
+);
+
+// ---- smtp accounts ----
+register(
+  'list_smtp_accounts',
+  { title: 'List SMTP accounts', description: 'List outbound SMTP accounts.', readOnly: true },
+  {},
+  () => client.get('/admin/api/smtp-accounts'),
+);
+
+register(
+  'create_smtp_account',
+  { title: 'Create SMTP account', description: 'Add an outbound SMTP account. Credentials are env-var NAMES, not values.' },
+  {
+    name: z.string(),
+    host: z.string(),
+    port: z.number().int(),
+    secure: z.boolean(),
+    fromAddress: z.string(),
+    priority: z.number().int(),
+    fromName: z.string().optional(),
+    userEnvVar: z.string().optional(),
+    passwordEnvVar: z.string().optional(),
+    active: z.boolean().optional(),
+    domainId: z.string().optional(),
+  },
+  (body) => client.post('/admin/api/smtp-accounts', body),
+);
+
+register(
+  'delete_smtp_account',
+  { title: 'Delete SMTP account', description: 'Delete an SMTP account.', destructive: true },
+  { id: z.string() },
+  ({ id }) => client.delete(`/admin/api/smtp-accounts/${seg(id)}`),
+);
+
+// ---- api keys ----
+register(
+  'list_api_keys',
+  { title: 'List API keys', description: 'List API keys (no secrets).', readOnly: true },
+  {},
+  () => client.get('/admin/api/api-keys'),
+);
+
+register(
+  'create_api_key',
+  { title: 'Create API key', description: 'Create an API key; the plaintext is returned ONCE.' },
+  { name: z.string(), scopes: z.array(z.string()).optional(), expiresAt: z.string().optional() },
+  (body) => client.post('/admin/api/api-keys', body),
+);
+
+register(
+  'revoke_api_key',
+  { title: 'Revoke API key', description: 'Revoke an API key.', destructive: true },
+  { id: z.string() },
+  ({ id }) => client.delete(`/admin/api/api-keys/${seg(id)}`),
+);
+
+// ---- webhooks ----
+register(
+  'list_webhooks',
+  { title: 'List webhooks', description: 'List webhook subscriptions.', readOnly: true },
+  {},
+  () => client.get('/admin/api/webhooks'),
+);
+
+register(
+  'create_webhook',
+  { title: 'Create webhook', description: 'Create a webhook subscription; the signing secret is returned ONCE.' },
+  { name: z.string(), url: z.string(), events: z.array(z.string()), active: z.boolean().optional() },
+  (body) => client.post('/admin/api/webhooks', body),
+);
+
+register(
+  'test_webhook',
+  { title: 'Test webhook', description: 'Send a test delivery to a webhook.' },
+  { id: z.string() },
+  ({ id }) => client.post(`/admin/api/webhooks/${seg(id)}/test`),
+);
+
+register(
+  'delete_webhook',
+  { title: 'Delete webhook', description: 'Delete a webhook subscription.', destructive: true },
+  { id: z.string() },
+  ({ id }) => client.delete(`/admin/api/webhooks/${seg(id)}`),
+);
+
+// ---- feature flags ----
+register(
+  'list_feature_flags',
+  { title: 'List feature flags', description: 'List feature flags and their state.', readOnly: true },
+  {},
+  () => client.get('/admin/api/feature-flags'),
+);
+
+register(
+  'set_feature_flag',
+  { title: 'Set feature flag', description: 'Enable or disable a feature flag.' },
+  { key: z.string(), enabled: z.boolean() },
+  ({ key, enabled }) => client.patch(`/admin/api/feature-flags/${seg(key)}`, { enabled }),
+);
+
+// ---- DMS↔DB sync ----
+register(
+  'sync_preview',
+  {
+    title: 'Sync preview',
+    description: 'Compute DMS↔DB divergence as reviewable items. Writes nothing.',
+    readOnly: true,
+  },
+  {},
+  () => client.get('/admin/api/sync/preview'),
+);
+
+register(
+  'sync_status',
+  { title: 'Sync status', description: 'Last sync run summary.', readOnly: true },
+  {},
+  () => client.get('/admin/api/sync/status'),
+);
+
+register(
+  'sync_apply',
+  {
+    title: 'Sync apply',
+    description:
+      'Apply selected reconciliation resolutions. Use stateHash values from sync_preview. ' +
+      'Deletes require confirmDeletes=true.',
+    destructive: true,
+  },
+  {
+    confirmDeletes: z.boolean().optional(),
+    resolutions: z
+      .array(
+        z.object({
+          entityType: z.enum(['domain', 'mailbox', 'alias', 'dkim']),
+          key: z.string(),
+          resolution: z.enum(['import', 'push', 'field_pick', 'delete_db', 'delete_dms', 'skip']),
+          stateHash: z.string(),
+          fields: z.record(z.enum(['dms', 'db'])).optional(),
+          password: z.string().optional(),
+        }),
+      )
+      .min(1),
+  },
+  (body) => client.post('/admin/api/sync/apply', body),
+);
+
+async function main(): Promise<void> {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error(`mailserver-mcp connected (target: ${baseUrl})`);
+}
+
+main().catch((err) => {
+  console.error('Fatal:', err);
+  process.exit(1);
+});

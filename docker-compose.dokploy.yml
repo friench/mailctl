@@ -1,0 +1,156 @@
+# Dokploy deployment — single Compose stack: docker-mailserver + mail-api.
+#
+# Differences vs. ./docker-compose.yml:
+#   - No nginx-certbot service (Dokploy's Traefik handles HTTP/HTTPS + Let's Encrypt)
+#   - mail-api carries Traefik labels for the admin dashboard route
+#   - A dummy "mail-cert" router forces Traefik to issue a cert for $MAIL_HOSTNAME
+#     so docker-mailserver can reuse it for SMTP/IMAP TLS
+#   - Persistent state lives in named volumes (Dokploy snapshots them)
+#   - NGINX_RELOAD_ENABLED=false in mail-api (no nginx to reload)
+#
+# Variables come from `.env.dokploy.example` — copy to `.env` in Dokploy's stack
+# editor and fill in. Required: MAIL_HOSTNAME, ADMIN_HOSTNAME, POSTMASTER_ADDRESS,
+# SESSION_SECRET, TRAEFIK_NETWORK, TRAEFIK_ACME_PATH.
+
+services:
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:15.1.0
+    container_name: mailserver
+    hostname: ${MAIL_HOSTNAME}
+    env_file:
+      - .env
+    environment:
+      # Override here so SSL_DOMAIN tracks MAIL_HOSTNAME without the user
+      # having to set it twice in .env (env_file values are not interpolated).
+      SSL_DOMAIN: ${MAIL_HOSTNAME}
+      OVERRIDE_HOSTNAME: ${MAIL_HOSTNAME}
+    ports:
+      - "25:25"
+      - "465:465"
+      - "587:587"
+      - "993:993"
+    volumes:
+      - mail_data:/var/mail/
+      - mail_state:/var/mail-state/
+      - mail_logs:/var/log/mail/
+      - dms_config:/tmp/docker-mailserver/
+      # PEMs extracted from Traefik's acme.json by traefik-certs-dumper below.
+      # SSL_TYPE=letsencrypt reads /etc/letsencrypt/live/${SSL_DOMAIN}/{fullchain,privkey}.pem
+      - mail_certs:/etc/letsencrypt/live:ro
+      - /etc/localtime:/etc/localtime:ro
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+    stop_grace_period: 1m
+    depends_on:
+      - traefik-certs-dumper
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - mailnet
+      - traefik
+
+  # Watches Traefik's acme.json and writes per-domain PEMs into mail_certs.
+  # Output layout: /output/${DOMAIN}/{fullchain,privkey}.pem
+  # which surfaces in mailserver as /etc/letsencrypt/live/${DOMAIN}/...
+  traefik-certs-dumper:
+    image: ldez/traefik-certs-dumper:v2
+    container_name: mail-certs-dumper
+    command:
+      - file
+      - --version=v2
+      - --watch
+      - --source=/traefik/acme.json
+      - --dest=/output
+      - --domain-subdir
+      - --crt-name=fullchain
+      - --crt-ext=.pem
+      - --key-name=privkey
+      - --key-ext=.pem
+    restart: unless-stopped
+    volumes:
+      - ${TRAEFIK_ACME_PATH}:/traefik/acme.json:ro
+      - mail_certs:/output
+    networks:
+      - mailnet
+
+  mail-api:
+    build:
+      context: ./mailserver-api
+    container_name: mail-api
+    restart: unless-stopped
+    # The image runs as a non-root user, so grant it the host's docker group
+    # (the GID that owns /var/run/docker.sock) — otherwise `docker exec` into
+    # the mailserver (mailbox/DKIM provisioning) fails with EACCES on the socket.
+    # Find the GID with: stat -c '%g' /var/run/docker.sock   (default install: 983)
+    group_add:
+      - "${DOCKER_GID:-983}"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: /app/data/data.db
+      DMS_CONTAINER_NAME: mailserver
+      DOCKER_SOCKET_PATH: /var/run/docker.sock
+      # No nginx in this stack — Traefik replaces it
+      NGINX_RELOAD_ENABLED: "false"
+      TRUST_PROXY: "1"
+      SESSION_SECRET: ${SESSION_SECRET}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - api_data:/app/data
+      # docker.sock = root-equivalent on host. For prod, swap in
+      # tecnativa/docker-socket-proxy and point DOCKER_SOCKET_PATH at it.
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - mailnet
+      - traefik
+    depends_on:
+      - mailserver
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3050/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK}"
+
+      # Admin dashboard + REST API
+      - "traefik.http.routers.mail-api.rule=Host(`${ADMIN_HOSTNAME}`)"
+      - "traefik.http.routers.mail-api.entrypoints=websecure"
+      - "traefik.http.routers.mail-api.tls=true"
+      - "traefik.http.routers.mail-api.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.services.mail-api.loadbalancer.server.port=3050"
+
+      # Dummy router to force Traefik to acquire a cert for the mail
+      # hostname (SMTP/IMAP). Reuses the mail-api service so any HTTPS hit
+      # to https://${MAIL_HOSTNAME}/ returns the dashboard 401 — harmless.
+      - "traefik.http.routers.mail-cert.rule=Host(`${MAIL_HOSTNAME}`)"
+      - "traefik.http.routers.mail-cert.entrypoints=websecure"
+      - "traefik.http.routers.mail-cert.tls=true"
+      - "traefik.http.routers.mail-cert.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.routers.mail-cert.service=mail-api"
+
+volumes:
+  mail_data:
+  mail_state:
+  mail_logs:
+  dms_config:
+  api_data:
+  # Per-domain PEMs written by traefik-certs-dumper, mounted read-only into
+  # mailserver as /etc/letsencrypt/live.
+  mail_certs:
+
+networks:
+  mailnet:
+    driver: bridge
+  # Network where Dokploy's Traefik runs. Default for a fresh Dokploy
+  # install is "dokploy-network".
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK}
