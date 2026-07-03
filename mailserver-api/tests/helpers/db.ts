@@ -28,17 +28,34 @@ const silentLogger = createLogger({ NODE_ENV: 'test', LOG_LEVEL: 'silent' });
 /** Stub DNS resolver that records lookups and returns canned responses. */
 export class StubDnsResolver implements DnsLikeResolver {
   public a = new Map<string, string[]>();
+  public aaaa = new Map<string, string[]>();
   public mx = new Map<string, Array<{ exchange: string; priority: number }>>();
   public txt = new Map<string, string[][]>();
+  public srv = new Map<
+    string,
+    Array<{ name: string; port: number; priority: number; weight: number }>
+  >();
+  public ptr = new Map<string, string[]>();
 
   async resolve4(hostname: string): Promise<string[]> {
     return this.a.get(hostname) ?? [];
+  }
+  async resolve6(hostname: string): Promise<string[]> {
+    return this.aaaa.get(hostname) ?? [];
   }
   async resolveMx(hostname: string): Promise<Array<{ exchange: string; priority: number }>> {
     return this.mx.get(hostname) ?? [];
   }
   async resolveTxt(hostname: string): Promise<string[][]> {
     return this.txt.get(hostname) ?? [];
+  }
+  async resolveSrv(
+    hostname: string,
+  ): Promise<Array<{ name: string; port: number; priority: number; weight: number }>> {
+    return this.srv.get(hostname) ?? [];
+  }
+  async reverse(ip: string): Promise<string[]> {
+    return this.ptr.get(ip) ?? [];
   }
 }
 

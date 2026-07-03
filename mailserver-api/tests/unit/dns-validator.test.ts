@@ -3,19 +3,31 @@ import { DnsValidator, type DnsLikeResolver } from '../../src/lib/dns-validator'
 
 class StubResolver implements DnsLikeResolver {
   a = new Map<string, string[]>();
+  aaaa = new Map<string, string[]>();
   mx = new Map<string, Array<{ exchange: string; priority: number }>>();
   txt = new Map<string, string[][]>();
+  srv = new Map<string, Array<{ name: string; port: number; priority: number; weight: number }>>();
+  ptr = new Map<string, string[]>();
   rejectA: Error | null = null;
 
   async resolve4(hostname: string): Promise<string[]> {
     if (this.rejectA) throw this.rejectA;
     return this.a.get(hostname) ?? [];
   }
+  async resolve6(hostname: string): Promise<string[]> {
+    return this.aaaa.get(hostname) ?? [];
+  }
   async resolveMx(hostname: string) {
     return this.mx.get(hostname) ?? [];
   }
   async resolveTxt(hostname: string): Promise<string[][]> {
     return this.txt.get(hostname) ?? [];
+  }
+  async resolveSrv(hostname: string) {
+    return this.srv.get(hostname) ?? [];
+  }
+  async reverse(ip: string): Promise<string[]> {
+    return this.ptr.get(ip) ?? [];
   }
 }
 
@@ -28,7 +40,7 @@ describe('DnsValidator', () => {
     v = new DnsValidator({ resolver: r });
   });
 
-  it('returns ok for all 5 records when DNS is correctly configured', async () => {
+  it('returns ok for the core records; optional records missing when unset', async () => {
     r.a.set('mail.example.com', ['203.0.113.10']);
     r.mx.set('example.com', [{ exchange: 'mail.example.com', priority: 10 }]);
     r.txt.set('example.com', [['v=spf1 a mx -all']]);
@@ -42,7 +54,40 @@ describe('DnsValidator', () => {
       'SPF:ok',
       'DKIM:ok',
       'DMARC:ok',
+      'AAAA:missing',
+      'PTR:missing',
+      'MTA-STS:missing',
+      'TLS-RPT:missing',
+      'AUTODISCOVER:missing',
     ]);
+  });
+
+  it('validates the extended records (AAAA, PTR, MTA-STS, TLS-RPT, autodiscover)', async () => {
+    r.a.set('mail.example.com', ['203.0.113.10']);
+    r.aaaa.set('mail.example.com', ['2001:db8::10']);
+    r.ptr.set('203.0.113.10', ['mail.example.com.']);
+    r.txt.set('_mta-sts.example.com', [['v=STSv1; id=20260101T000000']]);
+    r.txt.set('_smtp._tls.example.com', [['v=TLSRPTv1; rua=mailto:tlsrpt@example.com']]);
+    r.srv.set('_autodiscover._tcp.example.com', [
+      { name: 'mail.example.com', port: 443, priority: 0, weight: 0 },
+    ]);
+
+    const out = await v.checkAll('example.com', { dkimSelector: 'mail' });
+    const byType = Object.fromEntries(out.map((x) => [x.type, x.status]));
+    expect(byType['AAAA']).toBe('ok');
+    expect(byType['PTR']).toBe('ok');
+    expect(byType['MTA-STS']).toBe('ok');
+    expect(byType['TLS-RPT']).toBe('ok');
+    expect(byType['AUTODISCOVER']).toBe('ok');
+  });
+
+  it('reports PTR mismatch when reverse DNS points elsewhere', async () => {
+    r.a.set('mail.example.com', ['203.0.113.10']);
+    r.ptr.set('203.0.113.10', ['other.host.example.net.']);
+    const out = await v.checkAll('example.com');
+    const ptr = out.find((x) => x.type === 'PTR')!;
+    expect(ptr.status).toBe('mismatch');
+    expect(ptr.expected).toBe('mail.example.com');
   });
 
   it('reports missing for empty answers', async () => {

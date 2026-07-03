@@ -264,7 +264,17 @@ export interface HealthDTO {
 // ── DNS check ────────────────────────────────────────────────────────────────
 
 export interface DnsRecordDTO {
-  type: 'A' | 'MX' | 'SPF' | 'DKIM' | 'DMARC';
+  type:
+    | 'A'
+    | 'AAAA'
+    | 'MX'
+    | 'SPF'
+    | 'DKIM'
+    | 'DMARC'
+    | 'PTR'
+    | 'MTA-STS'
+    | 'TLS-RPT'
+    | 'AUTODISCOVER';
   hostname: string;
   status: 'ok' | 'missing' | 'mismatch' | 'error';
   expected?: string;
