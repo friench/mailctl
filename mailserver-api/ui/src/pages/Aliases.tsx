@@ -19,6 +19,11 @@ export function AliasesPage() {
           render: (r) => <span className="font-mono">{r.target}</span>,
         },
         { key: 'source', header: 'Source', render: (r) => r.source },
+        {
+          key: 'notes',
+          header: 'Notes',
+          render: (r) => <span className="text-slate-500 text-xs">{r.notes ?? '–'}</span>,
+        },
         { key: 'created', header: 'Created', render: (r) => shortDate(r.createdAt) },
       ]}
       createFields={[
@@ -34,7 +39,16 @@ export function AliasesPage() {
           required: true,
           placeholder: 'user@example.com',
         },
+        { name: 'notes', label: 'Notes (optional)' },
       ]}
+      transformCreate={(values) => {
+        const body: Record<string, unknown> = {
+          address: values.address,
+          target: values.target,
+        };
+        if (values.notes) body.notes = values.notes;
+        return body;
+      }}
     />
   );
 }

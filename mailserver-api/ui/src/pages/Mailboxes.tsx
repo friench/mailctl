@@ -24,6 +24,11 @@ export function MailboxesPage() {
           render: (r) => <SourceBadge source={r.source} externallyManaged={r.externallyManaged} />,
         },
         { key: 'synced', header: 'Last sync', render: (r) => shortDate(r.lastSyncedAt) },
+        {
+          key: 'notes',
+          header: 'Notes',
+          render: (r) => <span className="text-slate-500 text-xs">{r.notes ?? '–'}</span>,
+        },
         { key: 'created', header: 'Created', render: (r) => shortDate(r.createdAt) },
       ]}
       createFields={[
@@ -36,6 +41,7 @@ export function MailboxesPage() {
         },
         { name: 'password', label: 'Password (min 8 chars)', required: true, type: 'password' },
         { name: 'quotaMb', label: 'Quota MB (optional)', type: 'number' },
+        { name: 'notes', label: 'Notes (optional)' },
       ]}
       transformCreate={(values) => {
         const body: Record<string, unknown> = {
@@ -43,6 +49,7 @@ export function MailboxesPage() {
           password: values.password,
         };
         if (values.quotaMb && Number(values.quotaMb) > 0) body.quotaMb = Number(values.quotaMb);
+        if (values.notes) body.notes = values.notes;
         return body;
       }}
       rowActions={(row) => <MailboxActions mailbox={row} />}

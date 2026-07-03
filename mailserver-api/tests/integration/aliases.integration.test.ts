@@ -56,4 +56,13 @@ describe('/admin/api/aliases', () => {
     expect(h.dms.aliases.has('info@example.com')).toBe(false);
     expect(h.aliasRepo.list()).toHaveLength(0);
   });
+
+  it('persists notes on create', async () => {
+    const res = await request(app)
+      .post('/admin/api/aliases')
+      .set('X-Api-Key', adminKey)
+      .send({ address: 'team@example.com', target: 'user@example.com', notes: 'distribution' });
+    expect(res.status).toBe(201);
+    expect(res.body.notes).toBe('distribution');
+  });
 });

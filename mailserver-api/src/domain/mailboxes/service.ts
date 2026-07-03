@@ -12,11 +12,13 @@ export interface CreateMailboxInput {
   address: string;
   password: string;
   quotaMb?: number;
+  notes?: string | null;
 }
 
 export interface UpdateMailboxInput {
   quotaMb?: number | null;
   active?: boolean;
+  notes?: string | null;
 }
 
 export class MailboxService {
@@ -80,6 +82,7 @@ export class MailboxService {
       domainId: domain.id,
       quotaMb: input.quotaMb ?? null,
       active: true,
+      notes: input.notes ?? null,
     });
     this.events.dispatch('mailbox.created', {
       mailboxId: created.id,
