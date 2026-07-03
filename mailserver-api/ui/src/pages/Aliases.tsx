@@ -29,15 +29,15 @@ export function AliasesPage() {
       createFields={[
         {
           name: 'address',
-          label: 'Alias address',
+          label: 'Alias address (use @domain for a catch-all)',
           required: true,
-          placeholder: 'info@example.com',
+          placeholder: 'info@example.com or @example.com',
         },
         {
           name: 'target',
-          label: 'Target(s), comma-separated',
+          label: 'Target(s) — email, @domain, or devnull to discard',
           required: true,
-          placeholder: 'user@example.com',
+          placeholder: 'user@example.com, @other.com, devnull',
         },
         { name: 'notes', label: 'Notes (optional)' },
       ]}

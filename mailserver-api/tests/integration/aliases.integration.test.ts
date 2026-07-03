@@ -65,4 +65,42 @@ describe('/admin/api/aliases', () => {
     expect(res.status).toBe(201);
     expect(res.body.notes).toBe('distribution');
   });
+
+  it('creates a catch-all alias (@domain)', async () => {
+    const res = await request(app)
+      .post('/admin/api/aliases')
+      .set('X-Api-Key', adminKey)
+      .send({ address: '@example.com', target: 'user@example.com' });
+    expect(res.status).toBe(201);
+    expect(res.body.address).toBe('@example.com');
+    expect(h.dms.aliases.get('@example.com')).toBe('user@example.com');
+  });
+
+  it('creates a blackhole alias (target devnull)', async () => {
+    const res = await request(app)
+      .post('/admin/api/aliases')
+      .set('X-Api-Key', adminKey)
+      .send({ address: 'spam@example.com', target: 'devnull' });
+    expect(res.status).toBe(201);
+    expect(res.body.target).toBe('devnull');
+    expect(h.dms.aliases.get('spam@example.com')).toBe('devnull');
+  });
+
+  it('creates a whole-domain alias (@old -> @new)', async () => {
+    h.domainRepo.create({ name: 'old.example', active: true });
+    const res = await request(app)
+      .post('/admin/api/aliases')
+      .set('X-Api-Key', adminKey)
+      .send({ address: '@old.example', target: '@example.com' });
+    expect(res.status).toBe(201);
+    expect(h.dms.aliases.get('@old.example')).toBe('@example.com');
+  });
+
+  it('rejects an address with no domain part', async () => {
+    const res = await request(app)
+      .post('/admin/api/aliases')
+      .set('X-Api-Key', adminKey)
+      .send({ address: 'not-an-address', target: 'user@example.com' });
+    expect(res.status).toBe(400);
+  });
 });
