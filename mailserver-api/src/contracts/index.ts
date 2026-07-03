@@ -37,6 +37,7 @@ export interface DomainDTO {
   active: boolean;
   source: Source;
   dkimStatus: string | null;
+  notes: string | null;
   lastSyncedAt: string | null;
   createdAt: string;
 }
@@ -51,6 +52,7 @@ export interface MailboxDTO {
   active: boolean;
   source: Source;
   externallyManaged: boolean;
+  notes: string | null;
   lastSyncedAt: string | null;
   createdAt: string;
 }
@@ -63,6 +65,7 @@ export interface AliasDTO {
   target: string;
   domainId: string | null;
   source: Source;
+  notes: string | null;
   lastSyncedAt: string | null;
   createdAt: string;
 }

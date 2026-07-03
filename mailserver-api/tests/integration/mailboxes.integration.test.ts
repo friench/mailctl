@@ -293,3 +293,34 @@ describe('/admin/api/mailboxes password policy', () => {
     expect(res.body.error).toMatch(/breach/i);
   });
 });
+
+describe('/admin/api/mailboxes notes', () => {
+  let h: TestDbHandle;
+  let app: Express;
+  let adminKey: string;
+
+  beforeEach(() => {
+    h = createTestDb();
+    app = createTestApp(h).app;
+    adminKey = h.apiKeyService.generateAndStore('admin', { scopes: ['admin'] }).plain;
+    h.domainRepo.create({ name: 'example.org' });
+  });
+
+  afterEach(() => h.close());
+
+  it('persists notes on create and update', async () => {
+    const created = await request(app)
+      .post('/admin/api/mailboxes')
+      .set('X-Api-Key', adminKey)
+      .send({ address: 'noted@example.org', password: 'Gh7$kLmn92xQ', notes: 'VIP user' });
+    expect(created.status).toBe(201);
+    expect(created.body.notes).toBe('VIP user');
+
+    const updated = await request(app)
+      .patch(`/admin/api/mailboxes/${created.body.id}`)
+      .set('X-Api-Key', adminKey)
+      .send({ notes: 'changed note' });
+    expect(updated.status).toBe(200);
+    expect(updated.body.notes).toBe('changed note');
+  });
+});

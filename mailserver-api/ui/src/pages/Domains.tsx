@@ -57,6 +57,11 @@ export function DomainsPage() {
         },
         { key: 'active', header: 'Active', render: (r) => formatBoolean(r.active) },
         { key: 'source', header: 'Source', render: (r) => <SourceBadge source={r.source} /> },
+        {
+          key: 'notes',
+          header: 'Notes',
+          render: (r) => <span className="text-slate-500 text-xs">{r.notes ?? '–'}</span>,
+        },
         { key: 'created', header: 'Created', render: (r) => shortDate(r.createdAt) },
       ]}
       rowActions={(r) => (
@@ -70,10 +75,12 @@ export function DomainsPage() {
       createFields={[
         { name: 'name', label: 'Domain name', required: true, placeholder: 'example.com' },
         { name: 'dkimSelector', label: 'DKIM selector', placeholder: 'mail' },
+        { name: 'notes', label: 'Notes (optional)' },
       ]}
       transformCreate={(values) => {
         const body: Record<string, unknown> = { name: values.name };
         if (values.dkimSelector) body.dkimSelector = values.dkimSelector;
+        if (values.notes) body.notes = values.notes;
         return body;
       }}
     />

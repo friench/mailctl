@@ -41,6 +41,7 @@ export const domains = sqliteTable('domains', {
   source: text('source', { enum: SOURCES }).notNull().default('panel'),
   lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  notes: text('notes'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
@@ -79,6 +80,7 @@ export const mailboxes = sqliteTable(
     source: text('source', { enum: SOURCES }).notNull().default('panel'),
     externallyManaged: integer('externally_managed', { mode: 'boolean' }).notNull().default(false),
     active: integer('active', { mode: 'boolean' }).notNull().default(true),
+    notes: text('notes'),
     lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   },
@@ -95,6 +97,7 @@ export const aliases = sqliteTable(
     target: text('target').notNull(),
     domainId: text('domain_id').references(() => domains.id, { onDelete: 'set null' }),
     source: text('source', { enum: SOURCES }).notNull().default('panel'),
+    notes: text('notes'),
     lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   },

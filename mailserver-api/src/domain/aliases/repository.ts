@@ -8,12 +8,14 @@ export interface CreateAliasInput {
   target: string;
   domainId?: string | null;
   source?: Source;
+  notes?: string | null;
 }
 
 export interface UpdateAliasInput {
   target?: string;
   domainId?: string | null;
   source?: Source;
+  notes?: string | null;
 }
 
 export class AliasRepository {
@@ -26,6 +28,7 @@ export class AliasRepository {
       target: input.target,
       domainId: input.domainId ?? null,
       source: input.source ?? 'panel',
+      notes: input.notes ?? null,
       lastSyncedAt: null,
       createdAt: new Date(),
     };
@@ -50,6 +53,7 @@ export class AliasRepository {
     if (input.target !== undefined) updates.target = input.target;
     if (input.domainId !== undefined) updates.domainId = input.domainId;
     if (input.source !== undefined) updates.source = input.source;
+    if (input.notes !== undefined) updates.notes = input.notes;
     if (Object.keys(updates).length === 0) return this.findById(id);
     this.db.update(aliases).set(updates).where(eq(aliases.id, id)).run();
     return this.findById(id);

@@ -8,6 +8,7 @@ export function serializeAlias(row: AliasRow): AliasDTO {
     target: row.target,
     domainId: row.domainId,
     source: row.source,
+    notes: row.notes,
     lastSyncedAt: row.lastSyncedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   };

@@ -12,12 +12,14 @@ export const createDomainSchema = z.object({
     .refine((v) => domainNameRegex.test(v), { message: 'Invalid domain name' }),
   dkimSelector: z.string().min(1).max(63).optional(),
   active: z.boolean().optional(),
+  notes: z.string().max(2000).nullable().optional(),
 });
 
 export const updateDomainSchema = z.object({
   dkimSelector: z.string().min(1).max(63).nullable().optional(),
   dkimPublicKey: z.string().nullable().optional(),
   active: z.boolean().optional(),
+  notes: z.string().max(2000).nullable().optional(),
 });
 
 const dkimSelectorRegex = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;

@@ -136,4 +136,22 @@ describe('/admin/api/domains', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  describe('notes', () => {
+    it('persists notes on create and update', async () => {
+      const created = await request(app)
+        .post('/admin/api/domains')
+        .set('X-Api-Key', adminKey)
+        .send({ name: 'noted.example', notes: 'primary domain' });
+      expect(created.status).toBe(201);
+      expect(created.body.notes).toBe('primary domain');
+
+      const updated = await request(app)
+        .patch(`/admin/api/domains/${created.body.id}`)
+        .set('X-Api-Key', adminKey)
+        .send({ notes: 'updated note' });
+      expect(updated.status).toBe(200);
+      expect(updated.body.notes).toBe('updated note');
+    });
+  });
 });

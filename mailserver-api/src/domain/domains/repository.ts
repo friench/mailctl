@@ -10,6 +10,7 @@ export interface CreateDomainInput {
   dkimStatus?: string | null;
   source?: Source;
   active?: boolean;
+  notes?: string | null;
 }
 
 export interface UpdateDomainInput {
@@ -18,6 +19,7 @@ export interface UpdateDomainInput {
   dkimStatus?: string | null;
   source?: Source;
   active?: boolean;
+  notes?: string | null;
 }
 
 export class DomainRepository {
@@ -33,6 +35,7 @@ export class DomainRepository {
       source: input.source ?? 'panel',
       lastSyncedAt: null,
       active: input.active ?? true,
+      notes: input.notes ?? null,
       createdAt: new Date(),
     };
     this.db.insert(domains).values(row).run();
@@ -58,6 +61,7 @@ export class DomainRepository {
     if (input.dkimStatus !== undefined) updates.dkimStatus = input.dkimStatus;
     if (input.source !== undefined) updates.source = input.source;
     if (input.active !== undefined) updates.active = input.active;
+    if (input.notes !== undefined) updates.notes = input.notes;
 
     if (Object.keys(updates).length === 0) return this.findById(id);
 

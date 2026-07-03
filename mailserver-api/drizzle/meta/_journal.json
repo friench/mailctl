@@ -64,6 +64,13 @@
       "when": 1782899176366,
       "tag": "0008_furry_living_mummy",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1783069021090,
+      "tag": "0009_first_reaper",
+      "breakpoints": true
     }
   ]
 }

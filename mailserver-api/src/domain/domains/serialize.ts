@@ -10,6 +10,7 @@ export function serializeDomain(row: DomainRow): DomainDTO {
     active: row.active,
     source: row.source,
     dkimStatus: row.dkimStatus,
+    notes: row.notes,
     lastSyncedAt: row.lastSyncedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   };

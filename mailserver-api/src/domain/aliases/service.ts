@@ -8,6 +8,7 @@ import type { AliasRepository } from './repository';
 export interface CreateAliasInput {
   address: string;
   target: string;
+  notes?: string | null;
 }
 
 export class AliasService {
@@ -45,6 +46,7 @@ export class AliasService {
       target: input.target,
       domainId: domain.id,
       source: 'panel',
+      notes: input.notes ?? null,
     });
     return created;
   }

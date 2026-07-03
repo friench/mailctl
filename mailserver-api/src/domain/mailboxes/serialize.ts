@@ -10,6 +10,7 @@ export function serializeMailbox(row: MailboxRow): MailboxDTO {
     active: row.active,
     source: row.source,
     externallyManaged: row.externallyManaged,
+    notes: row.notes,
     lastSyncedAt: row.lastSyncedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   };
