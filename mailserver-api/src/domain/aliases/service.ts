@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { BusinessError } from '../../lib/errors';
 import { domainOf } from '../../lib/address';
 import type { DomainRepository } from '../domains/repository';
@@ -8,6 +9,13 @@ import type { AliasRepository } from './repository';
 export interface CreateAliasInput {
   address: string;
   target: string;
+  notes?: string | null;
+}
+
+export interface GenerateTempAliasInput {
+  domain: string;
+  target: string;
+  ttlHours?: number;
   notes?: string | null;
 }
 
@@ -56,5 +64,68 @@ export class AliasService {
     if (!row) throw new BusinessError(404, 'Alias not found');
     await this.dms.deleteAlias(row.address, row.target);
     this.repo.delete(id);
+  }
+
+  /**
+   * Generate a random temporary alias (`tmp-<hex>@domain`) forwarding to `target`.
+   * When `ttlHours` is set the alias auto-expires and is removed by the prune worker.
+   */
+  async generateTemp(input: GenerateTempAliasInput, now: Date = new Date()): Promise<AliasRow> {
+    const domain = this.domainRepo.findByName(input.domain.toLowerCase());
+    if (!domain) {
+      throw new BusinessError(
+        400,
+        `Domain "${input.domain}" is not registered`,
+        'DOMAIN_NOT_FOUND',
+      );
+    }
+    if (!domain.active) {
+      throw new BusinessError(400, `Domain "${domain.name}" is disabled`, 'DOMAIN_DISABLED');
+    }
+
+    let address = '';
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const candidate = `tmp-${randomBytes(4).toString('hex')}@${domain.name}`;
+      if (!this.repo.findByAddress(candidate)) {
+        address = candidate;
+        break;
+      }
+    }
+    if (!address) {
+      throw new BusinessError(
+        500,
+        'Could not generate a unique temp address',
+        'TEMP_ALIAS_COLLISION',
+      );
+    }
+
+    const expiresAt =
+      input.ttlHours !== undefined ? new Date(now.getTime() + input.ttlHours * 3_600_000) : null;
+
+    await this.dms.addAlias(address, input.target);
+    return this.repo.create({
+      address,
+      target: input.target,
+      domainId: domain.id,
+      source: 'panel',
+      notes: input.notes ?? null,
+      expiresAt,
+    });
+  }
+
+  /** Remove temp aliases whose TTL has passed (from DMS + DB). Returns the count pruned. */
+  async pruneExpired(now: Date = new Date()): Promise<number> {
+    const expired = this.repo.findExpired(now);
+    let pruned = 0;
+    for (const row of expired) {
+      try {
+        await this.dms.deleteAlias(row.address, row.target);
+        this.repo.delete(row.id);
+        pruned++;
+      } catch {
+        // Leave the row for the next tick if DMS removal fails.
+      }
+    }
+    return pruned;
   }
 }

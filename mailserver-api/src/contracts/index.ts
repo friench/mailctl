@@ -68,6 +68,8 @@ export interface AliasDTO {
   domainId: string | null;
   source: Source;
   notes: string | null;
+  /** When set, the alias auto-expires (temp address) and is pruned after this time. */
+  expiresAt: string | null;
   lastSyncedAt: string | null;
   createdAt: string;
 }
