@@ -84,6 +84,14 @@ export class DockerodeDmsClient implements DmsClient {
     await this.runSetup(['quota', 'del', address]);
   }
 
+  async setSendRestricted(address: string, restricted: boolean): Promise<void> {
+    await this.runSetup(['email', 'restrict', restricted ? 'add' : 'del', 'send', address]);
+  }
+
+  async setReceiveRestricted(address: string, restricted: boolean): Promise<void> {
+    await this.runSetup(['email', 'restrict', restricted ? 'add' : 'del', 'receive', address]);
+  }
+
   async generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void> {
     await this.runSetup([
       'config',

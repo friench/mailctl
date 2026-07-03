@@ -6,6 +6,10 @@ export interface DmsClient {
   deleteEmail(address: string): Promise<void>;
   setQuota(address: string, megabytes: number): Promise<void>;
   deleteQuota(address: string): Promise<void>;
+  /** Block/unblock outbound mail for an address (docker-mailserver `email restrict … send`). */
+  setSendRestricted(address: string, restricted: boolean): Promise<void>;
+  /** Block/unblock inbound mail for an address (docker-mailserver `email restrict … receive`). */
+  setReceiveRestricted(address: string, restricted: boolean): Promise<void>;
   generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void>;
   readDkimPublicKey(domain: string, selector: string): Promise<string>;
   // Read-only enumeration used by the DMS↔DB reconciliation feature.

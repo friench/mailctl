@@ -324,3 +324,67 @@ describe('/admin/api/mailboxes notes', () => {
     expect(updated.body.notes).toBe('changed note');
   });
 });
+
+describe('/admin/api/mailboxes send/receive restrictions', () => {
+  let h: TestDbHandle;
+  let app: Express;
+  let adminKey: string;
+  let id: string;
+
+  beforeEach(async () => {
+    h = createTestDb();
+    app = createTestApp(h).app;
+    adminKey = h.apiKeyService.generateAndStore('admin', { scopes: ['admin'] }).plain;
+    h.domainRepo.create({ name: 'example.org' });
+    const created = await request(app)
+      .post('/admin/api/mailboxes')
+      .set('X-Api-Key', adminKey)
+      .send({ address: 'user@example.org', password: 'Gh7$kLmn92xQ' });
+    id = created.body.id;
+  });
+
+  afterEach(() => h.close());
+
+  it('defaults to not blocked', () => {
+    expect(h.dms.sendRestricted.has('user@example.org')).toBe(false);
+    expect(h.dms.receiveRestricted.has('user@example.org')).toBe(false);
+  });
+
+  it('blocks and unblocks sending, reflecting into DMS', async () => {
+    const blocked = await request(app)
+      .patch(`/admin/api/mailboxes/${id}`)
+      .set('X-Api-Key', adminKey)
+      .send({ sendBlocked: true });
+    expect(blocked.status).toBe(200);
+    expect(blocked.body.sendBlocked).toBe(true);
+    expect(h.dms.sendRestricted.has('user@example.org')).toBe(true);
+
+    const unblocked = await request(app)
+      .patch(`/admin/api/mailboxes/${id}`)
+      .set('X-Api-Key', adminKey)
+      .send({ sendBlocked: false });
+    expect(unblocked.body.sendBlocked).toBe(false);
+    expect(h.dms.sendRestricted.has('user@example.org')).toBe(false);
+  });
+
+  it('blocks receiving independently of sending', async () => {
+    await request(app)
+      .patch(`/admin/api/mailboxes/${id}`)
+      .set('X-Api-Key', adminKey)
+      .send({ receiveBlocked: true });
+    expect(h.dms.receiveRestricted.has('user@example.org')).toBe(true);
+    expect(h.dms.sendRestricted.has('user@example.org')).toBe(false);
+  });
+
+  it('clears restrictions when the mailbox is deleted', async () => {
+    await request(app)
+      .patch(`/admin/api/mailboxes/${id}`)
+      .set('X-Api-Key', adminKey)
+      .send({ sendBlocked: true, receiveBlocked: true });
+    expect(h.dms.sendRestricted.has('user@example.org')).toBe(true);
+
+    await request(app).delete(`/admin/api/mailboxes/${id}`).set('X-Api-Key', adminKey);
+    expect(h.dms.sendRestricted.has('user@example.org')).toBe(false);
+    expect(h.dms.receiveRestricted.has('user@example.org')).toBe(false);
+  });
+});

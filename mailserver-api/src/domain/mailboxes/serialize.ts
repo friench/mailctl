@@ -8,6 +8,8 @@ export function serializeMailbox(row: MailboxRow): MailboxDTO {
     domainId: row.domainId,
     quotaMb: row.quotaMb,
     active: row.active,
+    sendBlocked: row.sendBlocked,
+    receiveBlocked: row.receiveBlocked,
     source: row.source,
     externallyManaged: row.externallyManaged,
     notes: row.notes,
