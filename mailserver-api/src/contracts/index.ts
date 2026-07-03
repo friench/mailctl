@@ -265,6 +265,13 @@ export interface BackupsResponseDTO {
   items: BackupItemDTO[];
 }
 
+// ── self-service ─────────────────────────────────────────────────────────────
+
+export interface SelfServiceDTO {
+  /** The caller's own mailbox (matched by account email), or null if none. */
+  mailbox: MailboxDTO | null;
+}
+
 // ── app settings (UI bootstrap) ──────────────────────────────────────────────
 
 export interface AppSettingsDTO {

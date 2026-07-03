@@ -39,6 +39,7 @@ import { adminWebhooksRouter } from './http/routes/admin/webhooks';
 import { adminFeatureFlagsRouter } from './http/routes/admin/feature-flags';
 import { adminBackupsRouter } from './http/routes/admin/backups';
 import { adminSettingsRouter } from './http/routes/admin/settings';
+import { adminMeRouter } from './http/routes/admin/me';
 import { createErrorHandler } from './http/middleware/error';
 import { createSessionMiddleware } from './http/middleware/session';
 import { createAdminAuth } from './http/middleware/admin-auth';
@@ -160,6 +161,7 @@ export function createServer(deps: ServerDeps): Express {
   app.use(adminAliasesRouter(aliasService, domainService));
   app.use(adminSyncRouter(syncService));
   app.use(adminUsersRouter(userService));
+  app.use(adminMeRouter(mailboxService, userService));
   app.use(adminWebhooksRouter(webhookService));
   app.use(adminFeatureFlagsRouter(featureFlagService));
   app.use(adminStatsRouter(statsService));

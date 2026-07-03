@@ -6,8 +6,11 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 // Paths (relative to the /admin/api mount) whose resources are domain-scoped.
 const DOMAIN_SCOPED = ['/domains', '/mailboxes', '/aliases'];
-// Non-sensitive UI bootstrap available to any authenticated role.
+// Non-sensitive UI bootstrap, readable by any authenticated role.
 const ALWAYS_ALLOWED = ['/settings'];
+// Self-service — any authenticated role, any method (each action only touches
+// the caller's own mailbox; the routes enforce that).
+const SELF_SERVICE = ['/me'];
 
 function matches(path: string, prefixes: string[]): boolean {
   return prefixes.some((p) => path === p || path.startsWith(`${p}/`));
@@ -55,6 +58,12 @@ export function createRbacGuard(userRepo: UserRepository): RequestHandler {
 
     const path = req.path;
     const isWrite = !SAFE_METHODS.has(req.method);
+
+    // Self-service: any authenticated role, any method (own mailbox only).
+    if (matches(path, SELF_SERVICE)) {
+      next();
+      return;
+    }
 
     if (matches(path, ALWAYS_ALLOWED)) {
       if (isWrite && !authz.canWrite) {
