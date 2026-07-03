@@ -76,6 +76,28 @@ Doubling down on what already sets the project apart:
 - **Suppression lists & per-key send policies**; deliverability tooling
   (reputation/DNSBL views).
 
+## Multi-instance control plane (larger bet)
+
+A single pane of glass for a **fleet of docker-mailserver instances** — multiple hosts,
+regions, or tenants managed from one control plane instead of one panel per server.
+This is a cross-cutting architectural effort:
+
+- **Instance registry** — register DMS instances with their connection and credentials
+  (local Docker socket, a remote socket-proxy, or a lightweight per-host agent);
+  per-instance health and reachability.
+- **Scoped everything** — domains, mailboxes, aliases, SMTP accounts, DKIM and sync
+  become instance-scoped; API keys and RBAC gain an instance dimension.
+- **Send routing** — `POST /send` targets the right instance automatically (by sender
+  domain) or explicitly; queue and failover span the fleet.
+- **Aggregated views** — one dashboard rolling up health, queues, stats, DNS status,
+  and backups across all instances, with drill-down per instance.
+- **Fleet-aware MCP** — every tool gains an instance selector so agents can drive the
+  whole fleet.
+
+Enables managed hosting, multi-region deployments, and multi-tenant operation from a
+single endpoint. Builds naturally on RBAC/multi-tenancy (Phase B) and the
+socket-proxy work.
+
 ## Ideas / exploratory
 
 - Pluggable outbound transports (HTTP email providers alongside SMTP).
