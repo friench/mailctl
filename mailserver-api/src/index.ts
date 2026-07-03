@@ -14,6 +14,7 @@ import { SmtpAccountService } from './domain/smtp-accounts/service';
 import { MailSender } from './domain/send/mailer';
 import { MailboxRepository } from './domain/mailboxes/repository';
 import { MailboxService } from './domain/mailboxes/service';
+import { PolicyPasswordValidator } from './lib/password-policy';
 import { DockerodeDmsClient } from './domain/mailboxes/dockerode-dms-client';
 import { AliasRepository } from './domain/aliases/repository';
 import { AliasService } from './domain/aliases/service';
@@ -89,7 +90,17 @@ const webhookService = new WebhookService(
 );
 webhookService.recoverStuckDeliveries();
 
-const mailboxService = new MailboxService(mailboxRepo, domainRepo, dmsClient, webhookService);
+const passwordValidator = new PolicyPasswordValidator({
+  hibp: env.PASSWORD_HIBP_ENABLED,
+  minLength: env.PASSWORD_MIN_LENGTH,
+});
+const mailboxService = new MailboxService(
+  mailboxRepo,
+  domainRepo,
+  dmsClient,
+  webhookService,
+  passwordValidator,
+);
 
 const aliasRepo = new AliasRepository(dbClient.db);
 const aliasService = new AliasService(aliasRepo, domainRepo, dmsClient);

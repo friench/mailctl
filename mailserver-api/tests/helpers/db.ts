@@ -5,6 +5,7 @@ import { ApiKeyService } from '../../src/domain/apikeys/service';
 import { DomainRepository } from '../../src/domain/domains/repository';
 import { DomainDnsService } from '../../src/domain/domains/dns-service';
 import { DnsValidator, type DnsLikeResolver } from '../../src/lib/dns-validator';
+import type { PasswordValidator } from '../../src/lib/password-policy';
 import { SmtpAccountRepository } from '../../src/domain/smtp-accounts/repository';
 import { SmtpAccountLoader } from '../../src/domain/smtp-accounts/loader';
 import { MailboxRepository } from '../../src/domain/mailboxes/repository';
@@ -87,7 +88,10 @@ export interface TestDbHandle {
 }
 
 /** Open in-memory SQLite, run migrations, return wired-up repos + fakes. */
-export function createTestDb(env: NodeJS.ProcessEnv = {}): TestDbHandle {
+export function createTestDb(
+  env: NodeJS.ProcessEnv = {},
+  opts: { passwordValidator?: PasswordValidator } = {},
+): TestDbHandle {
   const client = createDb(':memory:');
   migrateDatabase(client.sqlite);
 
@@ -120,7 +124,13 @@ export function createTestDb(env: NodeJS.ProcessEnv = {}): TestDbHandle {
     featureFlagService,
     { allowPrivate: true },
   );
-  const mailboxService = new MailboxService(mailboxRepo, domainRepo, dms, webhookService);
+  const mailboxService = new MailboxService(
+    mailboxRepo,
+    domainRepo,
+    dms,
+    webhookService,
+    opts.passwordValidator,
+  );
 
   const aliasRepo = new AliasRepository(client.db);
   const aliasService = new AliasService(aliasRepo, domainRepo, dms);
