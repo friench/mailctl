@@ -10,6 +10,9 @@ const envSchema = z.object({
   DMS_CONTAINER_NAME: z.string().default('mailserver'),
   DOCKER_SOCKET_PATH: z.string().default('/var/run/docker.sock'),
 
+  /** Public IMAP/SMTP FQDN (e.g. mail.example.com). Enables mail-client autoconfig. */
+  MAIL_HOSTNAME: z.string().optional(),
+
   NGINX_CONTAINER_NAME: z.string().default('nginx'),
   NGINX_GENERATED_DIR: z.string().default('./data/nginx-generated'),
   NGINX_RELOAD_ENABLED: z

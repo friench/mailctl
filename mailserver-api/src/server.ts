@@ -22,6 +22,7 @@ import type { FeatureFlagService } from './domain/feature-flags/service';
 import type { BackupService } from './domain/backups/service';
 import type { StatsService } from './domain/stats/service';
 import { healthRouter } from './http/routes/health';
+import { autoconfigRouter } from './http/routes/autoconfig';
 import { metricsRouter } from './http/routes/metrics';
 import { adminStatsRouter } from './http/routes/admin/stats';
 import { sendRouter } from './http/routes/send';
@@ -137,6 +138,12 @@ export function createServer(deps: ServerDeps): Express {
 
   app.use(healthRouter(mailer));
   app.use(metricsRouter({ token: env.METRICS_TOKEN }));
+  app.use(
+    autoconfigRouter({
+      mailHostname: env.MAIL_HOSTNAME ?? null,
+      isDomainManaged: (domain) => domainService.list().some((d) => d.name === domain && d.active),
+    }),
+  );
   app.use(sendRouter(mailer, sendJobService, apiKeyService, logger));
   app.use(jobsRouter(sendJobService, apiKeyService, userRepo, logger));
 
@@ -154,7 +161,12 @@ export function createServer(deps: ServerDeps): Express {
   app.use(adminWebhooksRouter(webhookService));
   app.use(adminFeatureFlagsRouter(featureFlagService));
   app.use(adminStatsRouter(statsService));
-  app.use(adminSettingsRouter(env.WEBMAIL_URL ?? null));
+  app.use(
+    adminSettingsRouter({
+      webmailUrl: env.WEBMAIL_URL ?? null,
+      autoconfigEnabled: !!env.MAIL_HOSTNAME,
+    }),
+  );
   app.use(
     adminBackupsRouter(backupService, {
       intervalHours: env.BACKUP_INTERVAL_HOURS,
