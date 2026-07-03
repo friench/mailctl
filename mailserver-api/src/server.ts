@@ -37,6 +37,7 @@ import { adminUsersRouter } from './http/routes/admin/users';
 import { adminWebhooksRouter } from './http/routes/admin/webhooks';
 import { adminFeatureFlagsRouter } from './http/routes/admin/feature-flags';
 import { adminBackupsRouter } from './http/routes/admin/backups';
+import { adminSettingsRouter } from './http/routes/admin/settings';
 import { createErrorHandler } from './http/middleware/error';
 import { createSessionMiddleware } from './http/middleware/session';
 import { createAdminAuth } from './http/middleware/admin-auth';
@@ -153,6 +154,7 @@ export function createServer(deps: ServerDeps): Express {
   app.use(adminWebhooksRouter(webhookService));
   app.use(adminFeatureFlagsRouter(featureFlagService));
   app.use(adminStatsRouter(statsService));
+  app.use(adminSettingsRouter(env.WEBMAIL_URL ?? null));
   app.use(
     adminBackupsRouter(backupService, {
       intervalHours: env.BACKUP_INTERVAL_HOURS,

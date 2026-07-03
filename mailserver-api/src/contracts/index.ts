@@ -256,6 +256,13 @@ export interface BackupsResponseDTO {
   items: BackupItemDTO[];
 }
 
+// ── app settings (UI bootstrap) ──────────────────────────────────────────────
+
+export interface AppSettingsDTO {
+  /** Operator-configured webmail URL, or null when unset. */
+  webmailUrl: string | null;
+}
+
 // ── health ───────────────────────────────────────────────────────────────────
 
 export interface HealthDTO {
