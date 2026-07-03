@@ -265,6 +265,8 @@ export interface BackupsResponseDTO {
 export interface AppSettingsDTO {
   /** Operator-configured webmail URL, or null when unset. */
   webmailUrl: string | null;
+  /** True when MAIL_HOSTNAME is set, so mail-client autoconfig is available. */
+  autoconfigEnabled: boolean;
 }
 
 // ── health ───────────────────────────────────────────────────────────────────

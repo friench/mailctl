@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ResourceTable, formatBoolean, shortDate } from '../components/ResourceTable';
 import { api } from '../api';
-import type { AliasDTO as Alias, MailboxDTO as Mailbox } from '@contracts';
+import type { AliasDTO as Alias, AppSettingsDTO, MailboxDTO as Mailbox } from '@contracts';
 
 /** Targets of a mailbox's forwarding alias, excluding the mailbox's own address (the "keep a copy" marker). */
 function forwardTargets(alias: Alias | undefined, address: string): string[] {
@@ -134,6 +134,11 @@ function SourceBadge({
 function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alias }) {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const settings = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => api.get<AppSettingsDTO>('/admin/api/settings'),
+    staleTime: 5 * 60_000,
+  });
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['mailboxes'] });
@@ -275,6 +280,14 @@ function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alia
       >
         {mailbox.receiveBlocked ? 'Allow receive' : 'Block receive'}
       </button>
+      {settings.data?.autoconfigEnabled && (
+        <a
+          href={`/mail/mobileconfig?email=${encodeURIComponent(mailbox.address)}`}
+          className="text-indigo-600 hover:underline text-xs"
+        >
+          Apple profile
+        </a>
+      )}
       {status && (
         <span className={`text-xs ${status.kind === 'ok' ? 'text-slate-600' : 'text-red-700'}`}>
           {status.text}
