@@ -1,5 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import type { AppSettingsDTO } from '@contracts';
 import { useAuth } from '../auth';
+import { api } from '../api';
 
 const NAV = [
   { to: '/admin/', label: 'Dashboard', end: true },
@@ -19,6 +22,12 @@ const NAV = [
 
 export function Layout() {
   const { user, logout } = useAuth();
+  const settings = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => api.get<AppSettingsDTO>('/admin/api/settings'),
+    staleTime: 5 * 60_000,
+  });
+  const webmailUrl = settings.data?.webmailUrl ?? null;
 
   return (
     <div className="min-h-screen flex bg-slate-50">
@@ -39,6 +48,16 @@ export function Layout() {
               {item.label}
             </NavLink>
           ))}
+          {webmailUrl && (
+            <a
+              href={webmailUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="block px-5 py-2 text-sm text-slate-300 hover:bg-slate-800"
+            >
+              Webmail ↗
+            </a>
+          )}
         </nav>
         <div className="px-5 py-3 border-t border-slate-700 text-xs">
           <div className="truncate text-slate-400">{user?.email}</div>

@@ -44,6 +44,9 @@ const envSchema = z.object({
   /** Minimum mailbox password length enforced by the strength policy. */
   PASSWORD_MIN_LENGTH: z.coerce.number().int().min(8).max(128).default(10),
 
+  /** Optional webmail URL surfaced as a link in the dashboard (e.g. Roundcube). */
+  WEBMAIL_URL: z.url().optional(),
+
   SESSION_SECRET: z
     .string()
     .min(32, 'SESSION_SECRET must be at least 32 characters (run: openssl rand -hex 32)'),
