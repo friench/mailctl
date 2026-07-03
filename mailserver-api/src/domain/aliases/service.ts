@@ -59,6 +59,24 @@ export class AliasService {
     return created;
   }
 
+  async update(id: string, input: { target?: string; notes?: string | null }): Promise<AliasRow> {
+    const row = this.repo.findById(id);
+    if (!row) throw new BusinessError(404, 'Alias not found');
+
+    if (input.target !== undefined && input.target !== row.target) {
+      // Reflect the retarget into docker-mailserver: drop the old mapping, add the new.
+      await this.dms.deleteAlias(row.address, row.target);
+      await this.dms.addAlias(row.address, input.target);
+    }
+
+    const updated = this.repo.update(id, {
+      ...(input.target !== undefined ? { target: input.target } : {}),
+      ...(input.notes !== undefined ? { notes: input.notes } : {}),
+    });
+    if (!updated) throw new BusinessError(404, 'Alias not found');
+    return updated;
+  }
+
   async delete(id: string): Promise<void> {
     const row = this.repo.findById(id);
     if (!row) throw new BusinessError(404, 'Alias not found');

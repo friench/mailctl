@@ -14,6 +14,13 @@ export const createAliasSchema = z.object({
 
 export type CreateAliasBody = z.infer<typeof createAliasSchema>;
 
+export const updateAliasSchema = z.object({
+  target: z.string().min(1, 'target is required').max(1024).optional(),
+  notes: z.string().max(2000).nullable().optional(),
+});
+
+export type UpdateAliasBody = z.infer<typeof updateAliasSchema>;
+
 /** Generate a random temporary alias (`tmp-<hex>@domain`) → target, optional TTL. */
 export const generateTempAliasSchema = z.object({
   domain: z.string().min(1).max(253).toLowerCase(),
