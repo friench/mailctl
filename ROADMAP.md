@@ -53,6 +53,11 @@ Small, high-visibility gaps — mostly enrichments of existing entities.
 - **Engine observability** — expose Rspamd stats/actions (and a link into its UI),
   Dovecot stats, docker-mailserver feature toggles (`mailserver.env`), and companion
   container status/restart. We surface the engine; we don't replace it.
+- **Spam & quarantine management** — list messages flagged or quarantined as spam,
+  inspect them, and **release** (deliver) or **delete**; per-recipient, with bulk
+  actions and retention.
+- **Allow / deny lists** — manage sender/domain/IP **allowlists and blocklists**
+  (and per-recipient overrides), wired into the spam engine and Postfix restrictions.
 - **Operational read-only views** — log tail + search, mail-queue viewer, and active
   IMAP/POP3 sessions.
 
