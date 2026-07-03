@@ -152,12 +152,12 @@ export function createServer(deps: ServerDeps): Express {
 
   const adminAuth = createAdminAuth(apiKeyService, userRepo, logger);
   app.use('/admin/api', adminAuth);
-  app.use('/admin/api', createRbacGuard());
+  app.use('/admin/api', createRbacGuard(userRepo));
   app.use(adminApiKeysRouter(apiKeyService));
   app.use(adminDomainsRouter(domainService, domainDnsService));
   app.use(adminSmtpAccountsRouter(smtpAccountService));
-  app.use(adminMailboxesRouter(mailboxService));
-  app.use(adminAliasesRouter(aliasService));
+  app.use(adminMailboxesRouter(mailboxService, domainService));
+  app.use(adminAliasesRouter(aliasService, domainService));
   app.use(adminSyncRouter(syncService));
   app.use(adminUsersRouter(userService));
   app.use(adminWebhooksRouter(webhookService));

@@ -11,6 +11,7 @@ export const createUserSchema = z.object({
 
 export const updateUserSchema = z.object({
   role: z.enum(USER_ROLES).optional(),
+  domainIds: z.array(z.uuid()).max(1000).optional(),
 });
 
 export const changePasswordSchema = z.object({

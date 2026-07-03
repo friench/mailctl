@@ -7,8 +7,11 @@ import { createUserSchema, updateUserSchema, changePasswordSchema } from '../../
 export function adminUsersRouter(service: UserService) {
   const router = Router();
 
+  const toDto = (user: Parameters<typeof serializeUser>[0]) =>
+    serializeUser(user, service.listDomainIds(user.id));
+
   router.get('/admin/api/users', (_req: Request, res: Response) => {
-    res.json(service.list().map(serializeUser));
+    res.json(service.list().map(toDto));
   });
 
   router.post(
@@ -16,20 +19,27 @@ export function adminUsersRouter(service: UserService) {
     asyncHandler(async (req: Request, res: Response) => {
       const data = createUserSchema.parse(req.body);
       const user = await service.create(data.email, data.password, data.role);
-      res.status(201).json(serializeUser(user));
+      res.status(201).json(toDto(user));
     }),
   );
 
   router.patch(
     '/admin/api/users/:id',
     asyncHandler(async (req: Request, res: Response) => {
+      const id = String(req.params.id ?? '');
       const data = updateUserSchema.parse(req.body);
-      if (data.role === undefined) {
+      if (data.role === undefined && data.domainIds === undefined) {
         res.status(400).json({ error: 'No updatable fields provided' });
         return;
       }
-      const user = service.updateRole(String(req.params.id ?? ''), data.role);
-      res.json(serializeUser(user));
+      let user = service.findById(id);
+      if (!user) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+      }
+      if (data.role !== undefined) user = service.updateRole(id, data.role);
+      if (data.domainIds !== undefined) service.setDomains(id, data.domainIds);
+      res.json(toDto(user));
     }),
   );
 
