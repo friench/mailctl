@@ -17,6 +17,7 @@ import { WebhooksPage } from './pages/Webhooks';
 import { FeatureFlagsPage } from './pages/FeatureFlags';
 import { BackupsPage } from './pages/Backups';
 import { StatsPage } from './pages/Stats';
+import { SelfServicePage } from './pages/SelfService';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +40,13 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** End users (domain_user) get the self-service view; everyone else the admin layout. */
+function RoleLayout() {
+  const { user } = useAuth();
+  if (user?.role === 'domain_user') return <SelfServicePage />;
+  return <Layout />;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -49,7 +57,7 @@ export default function App() {
             path="/admin"
             element={
               <RequireAuth>
-                <Layout />
+                <RoleLayout />
               </RequireAuth>
             }
           >

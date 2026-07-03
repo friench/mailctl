@@ -1,12 +1,8 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import type { UserDTO } from '@contracts';
 import { api, ApiError } from './api';
 
-export interface User {
-  id: string;
-  email: string;
-  createdAt: string;
-  lastLoginAt: string | null;
-}
+export type User = UserDTO;
 
 interface AuthContextValue {
   user: User | null;

@@ -47,6 +47,10 @@ export class MailboxService {
     return this.repo.findById(id);
   }
 
+  findByAddress(address: string): MailboxRow | undefined {
+    return this.repo.findByAddress(address.toLowerCase());
+  }
+
   async create(input: CreateMailboxInput): Promise<MailboxRow> {
     const address = input.address.toLowerCase();
     const domain = this.findDomainForAddress(address);
