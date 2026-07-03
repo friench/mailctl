@@ -17,7 +17,7 @@ describe('GET /admin/api/domains/:id/dns-check', () => {
 
   afterEach(() => h.close());
 
-  it('returns 5 records (A, MX, SPF, DKIM, DMARC) with statuses', async () => {
+  it('returns core + extended records (A, MX, SPF, DKIM, DMARC, AAAA, PTR, MTA-STS, TLS-RPT, autodiscover) with statuses', async () => {
     const domain = h.domainRepo.create({ name: 'example.com', dkimSelector: 'mail' });
 
     h.dnsResolver.a.set('mail.example.com', ['203.0.113.10']);
@@ -34,7 +34,18 @@ describe('GET /admin/api/domains/:id/dns-check', () => {
     expect(res.body.domain).toBe('example.com');
     expect(
       res.body.records.map((r: { type: string; status: string }) => `${r.type}:${r.status}`),
-    ).toEqual(['A:ok', 'MX:ok', 'SPF:ok', 'DKIM:ok', 'DMARC:ok']);
+    ).toEqual([
+      'A:ok',
+      'MX:ok',
+      'SPF:ok',
+      'DKIM:ok',
+      'DMARC:ok',
+      'AAAA:missing',
+      'PTR:missing',
+      'MTA-STS:missing',
+      'TLS-RPT:missing',
+      'AUTODISCOVER:missing',
+    ]);
   });
 
   it('returns 404 for unknown domain id', async () => {
