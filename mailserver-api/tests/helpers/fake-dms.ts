@@ -18,6 +18,8 @@ export class FakeDmsClient implements DmsClient {
   public quotas = new Map<string, number>();
   public dkim = new Map<string, DkimEntry>();
   public aliases = new Map<string, string>();
+  public sendRestricted = new Set<string>();
+  public receiveRestricted = new Set<string>();
   public calls: Array<{ method: string; args: unknown[] }> = [];
   public errors: Partial<Record<keyof DmsClient, Error>> = {};
 
@@ -58,6 +60,20 @@ export class FakeDmsClient implements DmsClient {
     this.calls.push({ method: 'deleteQuota', args: [address] });
     if (this.errors.deleteQuota) throw this.errors.deleteQuota;
     this.quotas.delete(address);
+  }
+
+  async setSendRestricted(address: string, restricted: boolean): Promise<void> {
+    this.calls.push({ method: 'setSendRestricted', args: [address, restricted] });
+    if (this.errors.setSendRestricted) throw this.errors.setSendRestricted;
+    if (restricted) this.sendRestricted.add(address);
+    else this.sendRestricted.delete(address);
+  }
+
+  async setReceiveRestricted(address: string, restricted: boolean): Promise<void> {
+    this.calls.push({ method: 'setReceiveRestricted', args: [address, restricted] });
+    if (this.errors.setReceiveRestricted) throw this.errors.setReceiveRestricted;
+    if (restricted) this.receiveRestricted.add(address);
+    else this.receiveRestricted.delete(address);
   }
 
   async generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void> {

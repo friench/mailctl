@@ -12,6 +12,8 @@ export const createMailboxSchema = z.object({
 export const updateMailboxSchema = z.object({
   quotaMb: z.number().int().positive().max(1_000_000).nullable().optional(),
   active: z.boolean().optional(),
+  sendBlocked: z.boolean().optional(),
+  receiveBlocked: z.boolean().optional(),
   notes: z.string().max(2000).nullable().optional(),
 });
 

@@ -80,6 +80,8 @@ export const mailboxes = sqliteTable(
     source: text('source', { enum: SOURCES }).notNull().default('panel'),
     externallyManaged: integer('externally_managed', { mode: 'boolean' }).notNull().default(false),
     active: integer('active', { mode: 'boolean' }).notNull().default(true),
+    sendBlocked: integer('send_blocked', { mode: 'boolean' }).notNull().default(false),
+    receiveBlocked: integer('receive_blocked', { mode: 'boolean' }).notNull().default(false),
     notes: text('notes'),
     lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),

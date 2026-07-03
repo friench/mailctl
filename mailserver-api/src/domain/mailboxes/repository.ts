@@ -10,12 +10,16 @@ export interface CreateMailboxInput {
   source?: Source;
   externallyManaged?: boolean;
   active?: boolean;
+  sendBlocked?: boolean;
+  receiveBlocked?: boolean;
   notes?: string | null;
 }
 
 export interface UpdateMailboxInput {
   quotaMb?: number | null;
   active?: boolean;
+  sendBlocked?: boolean;
+  receiveBlocked?: boolean;
   notes?: string | null;
 }
 
@@ -31,6 +35,8 @@ export class MailboxRepository {
       source: input.source ?? 'panel',
       externallyManaged: input.externallyManaged ?? false,
       active: input.active ?? true,
+      sendBlocked: input.sendBlocked ?? false,
+      receiveBlocked: input.receiveBlocked ?? false,
       notes: input.notes ?? null,
       lastSyncedAt: null,
       createdAt: new Date(),

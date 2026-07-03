@@ -18,6 +18,8 @@ export interface CreateMailboxInput {
 export interface UpdateMailboxInput {
   quotaMb?: number | null;
   active?: boolean;
+  sendBlocked?: boolean;
+  receiveBlocked?: boolean;
   notes?: string | null;
 }
 
@@ -97,6 +99,11 @@ export class MailboxService {
     const row = this.repo.findById(id);
     if (!row) throw new BusinessError(404, 'Mailbox not found');
 
+    // Clear any restrictions first so a later mailbox at the same address is not
+    // stale-blocked (restrictions live in Postfix maps, independent of the account).
+    if (row.sendBlocked) await this.dms.setSendRestricted(row.address, false);
+    if (row.receiveBlocked) await this.dms.setReceiveRestricted(row.address, false);
+
     await this.dms.deleteEmail(row.address);
     this.repo.delete(id);
     this.events.dispatch('mailbox.deleted', {
@@ -124,6 +131,14 @@ export class MailboxService {
       } else {
         await this.dms.setQuota(row.address, input.quotaMb);
       }
+    }
+
+    // Reflect send/receive blocks into docker-mailserver only when they change.
+    if (input.sendBlocked !== undefined && input.sendBlocked !== row.sendBlocked) {
+      await this.dms.setSendRestricted(row.address, input.sendBlocked);
+    }
+    if (input.receiveBlocked !== undefined && input.receiveBlocked !== row.receiveBlocked) {
+      await this.dms.setReceiveRestricted(row.address, input.receiveBlocked);
     }
 
     const updated = this.repo.update(id, input);

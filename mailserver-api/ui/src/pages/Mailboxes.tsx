@@ -19,6 +19,21 @@ export function MailboxesPage() {
         { key: 'quota', header: 'Quota (MB)', render: (r) => r.quotaMb ?? '–' },
         { key: 'active', header: 'Active', render: (r) => formatBoolean(r.active) },
         {
+          key: 'delivery',
+          header: 'Send / Receive',
+          render: (r) => (
+            <span className="text-xs">
+              <span className={r.sendBlocked ? 'text-red-600' : 'text-emerald-600'}>
+                send {r.sendBlocked ? 'blocked' : 'ok'}
+              </span>
+              {' · '}
+              <span className={r.receiveBlocked ? 'text-red-600' : 'text-emerald-600'}>
+                recv {r.receiveBlocked ? 'blocked' : 'ok'}
+              </span>
+            </span>
+          ),
+        },
+        {
           key: 'source',
           header: 'Source',
           render: (r) => <SourceBadge source={r.source} externallyManaged={r.externallyManaged} />,
@@ -99,8 +114,12 @@ function MailboxActions({ mailbox }: { mailbox: Mailbox }) {
   });
 
   const edit = useMutation({
-    mutationFn: (body: { quotaMb?: number | null; active?: boolean }) =>
-      api.patch(`/admin/api/mailboxes/${mailbox.id}`, body),
+    mutationFn: (body: {
+      quotaMb?: number | null;
+      active?: boolean;
+      sendBlocked?: boolean;
+      receiveBlocked?: boolean;
+    }) => api.patch(`/admin/api/mailboxes/${mailbox.id}`, body),
     onSuccess: () => {
       invalidate();
       setStatus({ kind: 'ok', text: 'Mailbox updated' });
@@ -153,6 +172,22 @@ function MailboxActions({ mailbox }: { mailbox: Mailbox }) {
         className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
       >
         Edit
+      </button>
+      <button
+        type="button"
+        onClick={() => edit.mutate({ sendBlocked: !mailbox.sendBlocked })}
+        disabled={busy}
+        className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
+      >
+        {mailbox.sendBlocked ? 'Allow send' : 'Block send'}
+      </button>
+      <button
+        type="button"
+        onClick={() => edit.mutate({ receiveBlocked: !mailbox.receiveBlocked })}
+        disabled={busy}
+        className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
+      >
+        {mailbox.receiveBlocked ? 'Allow receive' : 'Block receive'}
       </button>
       {status && (
         <span className={`text-xs ${status.kind === 'ok' ? 'text-slate-600' : 'text-red-700'}`}>

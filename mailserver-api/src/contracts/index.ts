@@ -50,6 +50,8 @@ export interface MailboxDTO {
   domainId: string;
   quotaMb: number | null;
   active: boolean;
+  sendBlocked: boolean;
+  receiveBlocked: boolean;
   source: Source;
   externallyManaged: boolean;
   notes: string | null;

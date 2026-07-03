@@ -71,6 +71,13 @@
       "when": 1783069021090,
       "tag": "0009_first_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1783072945552,
+      "tag": "0010_sturdy_yellow_claw",
+      "breakpoints": true
     }
   ]
 }
