@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, isNotNull, lte } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { Db } from '../../db/client';
 import { aliases, type AliasRow, type Source } from '../../db/schema';
@@ -9,6 +9,7 @@ export interface CreateAliasInput {
   domainId?: string | null;
   source?: Source;
   notes?: string | null;
+  expiresAt?: Date | null;
 }
 
 export interface UpdateAliasInput {
@@ -29,6 +30,7 @@ export class AliasRepository {
       domainId: input.domainId ?? null,
       source: input.source ?? 'panel',
       notes: input.notes ?? null,
+      expiresAt: input.expiresAt ?? null,
       lastSyncedAt: null,
       createdAt: new Date(),
     };
@@ -46,6 +48,15 @@ export class AliasRepository {
 
   list(): AliasRow[] {
     return this.db.select().from(aliases).all();
+  }
+
+  /** Temp aliases whose expiry has passed (for the prune worker). */
+  findExpired(now: Date): AliasRow[] {
+    return this.db
+      .select()
+      .from(aliases)
+      .where(and(isNotNull(aliases.expiresAt), lte(aliases.expiresAt, now)))
+      .all();
   }
 
   update(id: string, input: UpdateAliasInput): AliasRow | undefined {

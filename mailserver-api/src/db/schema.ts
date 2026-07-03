@@ -100,6 +100,7 @@ export const aliases = sqliteTable(
     domainId: text('domain_id').references(() => domains.id, { onDelete: 'set null' }),
     source: text('source', { enum: SOURCES }).notNull().default('panel'),
     notes: text('notes'),
+    expiresAt: integer('expires_at', { mode: 'timestamp' }),
     lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   },

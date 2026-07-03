@@ -38,6 +38,7 @@ import { WebhookWorker } from './workers/webhook-worker';
 import { SyncWorker } from './workers/sync-worker';
 import { BackupWorker } from './workers/backup-worker';
 import { RetentionWorker } from './workers/retention-worker';
+import { TempAliasWorker } from './workers/temp-alias-worker';
 import { createServer } from './server';
 
 const env = loadEnv();
@@ -176,6 +177,9 @@ const retentionWorker = new RetentionWorker(retentionService, logger, {
 });
 retentionWorker.start();
 
+const tempAliasWorker = new TempAliasWorker(aliasService, logger);
+tempAliasWorker.start();
+
 async function bootstrapAdmin(): Promise<void> {
   if (userRepo.count() > 0) return;
   if (!env.INITIAL_ADMIN_EMAIL || !env.INITIAL_ADMIN_PASSWORD) {
@@ -226,6 +230,7 @@ async function shutdown(signal: string) {
     syncWorker.stop(),
     backupWorker.stop(),
     retentionWorker.stop(),
+    tempAliasWorker.stop(),
   ]);
   server.close(() => {
     logger.info('HTTP server closed');

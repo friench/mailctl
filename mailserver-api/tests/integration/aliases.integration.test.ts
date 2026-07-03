@@ -103,4 +103,56 @@ describe('/admin/api/aliases', () => {
       .send({ address: 'not-an-address', target: 'user@example.com' });
     expect(res.status).toBe(400);
   });
+
+  it('generates a temp alias with a TTL', async () => {
+    const res = await request(app)
+      .post('/admin/api/aliases/temp')
+      .set('X-Api-Key', adminKey)
+      .send({ domain: 'example.com', target: 'user@example.com', ttlHours: 24 });
+    expect(res.status).toBe(201);
+    expect(res.body.address).toMatch(/^tmp-[0-9a-f]{8}@example\.com$/);
+    expect(res.body.target).toBe('user@example.com');
+    expect(res.body.expiresAt).not.toBeNull();
+    expect(h.dms.aliases.get(res.body.address)).toBe('user@example.com');
+  });
+
+  it('generates a non-expiring temp alias when TTL is omitted', async () => {
+    const res = await request(app)
+      .post('/admin/api/aliases/temp')
+      .set('X-Api-Key', adminKey)
+      .send({ domain: 'example.com', target: 'user@example.com' });
+    expect(res.status).toBe(201);
+    expect(res.body.expiresAt).toBeNull();
+  });
+});
+
+describe('AliasService.pruneExpired', () => {
+  let h: TestDbHandle;
+
+  beforeEach(() => {
+    h = createTestDb();
+    h.domainRepo.create({ name: 'example.com', active: true });
+  });
+
+  afterEach(() => h.close());
+
+  it('removes expired temp aliases from DMS + DB and keeps the rest', async () => {
+    const t0 = new Date('2026-01-01T00:00:00Z');
+    const expiring = await h.aliasService.generateTemp(
+      { domain: 'example.com', target: 'user@example.com', ttlHours: 1 },
+      t0,
+    );
+    const permanent = await h.aliasService.generateTemp(
+      { domain: 'example.com', target: 'user@example.com' },
+      t0,
+    );
+
+    const pruned = await h.aliasService.pruneExpired(new Date('2026-01-01T02:00:00Z'));
+    expect(pruned).toBe(1);
+    expect(h.aliasRepo.findById(expiring.id)).toBeUndefined();
+    expect(h.dms.aliases.has(expiring.address)).toBe(false);
+    // The non-expiring alias survives.
+    expect(h.aliasRepo.findById(permanent.id)).toBeDefined();
+    expect(h.dms.aliases.has(permanent.address)).toBe(true);
+  });
 });

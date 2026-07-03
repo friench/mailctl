@@ -78,6 +78,13 @@
       "when": 1783072945552,
       "tag": "0010_sturdy_yellow_claw",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1783074010254,
+      "tag": "0011_outgoing_the_stranger",
+      "breakpoints": true
     }
   ]
 }
