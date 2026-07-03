@@ -2,7 +2,11 @@ import { Router, type Request, type Response } from 'express';
 import type { AliasService } from '../../../domain/aliases/service';
 import { serializeAlias } from '../../../domain/aliases/serialize';
 import { asyncHandler } from '../../../lib/async-handler';
-import { createAliasSchema, generateTempAliasSchema } from '../../validators/aliases';
+import {
+  createAliasSchema,
+  generateTempAliasSchema,
+  updateAliasSchema,
+} from '../../validators/aliases';
 
 export function adminAliasesRouter(service: AliasService) {
   const router = Router();
@@ -26,6 +30,15 @@ export function adminAliasesRouter(service: AliasService) {
       const data = generateTempAliasSchema.parse(req.body);
       const created = await service.generateTemp(data);
       res.status(201).json(serializeAlias(created));
+    }),
+  );
+
+  router.patch(
+    '/admin/api/aliases/:id',
+    asyncHandler(async (req: Request, res: Response) => {
+      const data = updateAliasSchema.parse(req.body);
+      const updated = await service.update(String(req.params.id ?? ''), data);
+      res.json(serializeAlias(updated));
     }),
   );
 

@@ -66,6 +66,31 @@ describe('/admin/api/aliases', () => {
     expect(res.body.notes).toBe('distribution');
   });
 
+  it('retargets an alias (forwarding) and reflects the change into DMS', async () => {
+    const created = await request(app)
+      .post('/admin/api/aliases')
+      .set('X-Api-Key', adminKey)
+      .send({ address: 'fwd@example.com', target: 'a@example.com' });
+
+    // "Deliver locally and forward" — include the address itself in the targets.
+    const res = await request(app)
+      .patch(`/admin/api/aliases/${created.body.id}`)
+      .set('X-Api-Key', adminKey)
+      .send({ target: 'fwd@example.com, other@example.com' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.target).toBe('fwd@example.com, other@example.com');
+    expect(h.dms.aliases.get('fwd@example.com')).toBe('fwd@example.com, other@example.com');
+  });
+
+  it('returns 404 when updating an unknown alias', async () => {
+    const res = await request(app)
+      .patch('/admin/api/aliases/00000000-0000-0000-0000-000000000000')
+      .set('X-Api-Key', adminKey)
+      .send({ target: 'x@example.com' });
+    expect(res.status).toBe(404);
+  });
+
   it('creates a catch-all alias (@domain)', async () => {
     const res = await request(app)
       .post('/admin/api/aliases')
