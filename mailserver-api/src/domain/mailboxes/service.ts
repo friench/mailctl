@@ -4,6 +4,7 @@ import type { DomainRepository } from '../domains/repository';
 import type { DomainRow, MailboxRow } from '../../db/schema';
 import type { EventDispatcher } from '../events/types';
 import { NOOP_DISPATCHER } from '../events/types';
+import type { PasswordValidator } from '../../lib/password-policy';
 import type { DmsClient } from './dms-client';
 import type { MailboxRepository } from './repository';
 
@@ -24,7 +25,15 @@ export class MailboxService {
     private readonly domainRepo: DomainRepository,
     private readonly dms: DmsClient,
     private readonly events: EventDispatcher = NOOP_DISPATCHER,
+    private readonly passwordValidator?: PasswordValidator,
   ) {}
+
+  /** Enforce the password policy (strength + breached check) when a validator is configured. */
+  private async assertPasswordAcceptable(password: string): Promise<void> {
+    if (!this.passwordValidator) return;
+    const error = await this.passwordValidator.validate(password);
+    if (error) throw new BusinessError(400, error, 'WEAK_PASSWORD');
+  }
 
   list(): MailboxRow[] {
     return this.repo.list();
@@ -53,6 +62,7 @@ export class MailboxService {
       throw new BusinessError(409, `Mailbox "${address}" already exists`, 'MAILBOX_EXISTS');
     }
 
+    await this.assertPasswordAcceptable(input.password);
     await this.dms.addEmail(address, input.password);
 
     if (input.quotaMb !== undefined) {
@@ -97,6 +107,7 @@ export class MailboxService {
     const row = this.repo.findById(id);
     if (!row) throw new BusinessError(404, 'Mailbox not found');
 
+    await this.assertPasswordAcceptable(password);
     await this.dms.updatePassword(row.address, password);
   }
 

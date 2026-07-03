@@ -35,6 +35,15 @@ const envSchema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
 
+  /** Reject mailbox passwords found in the Have I Been Pwned breach corpus. Default true. */
+  PASSWORD_HIBP_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+
+  /** Minimum mailbox password length enforced by the strength policy. */
+  PASSWORD_MIN_LENGTH: z.coerce.number().int().min(8).max(128).default(10),
+
   SESSION_SECRET: z
     .string()
     .min(32, 'SESSION_SECRET must be at least 32 characters (run: openssl rand -hex 32)'),

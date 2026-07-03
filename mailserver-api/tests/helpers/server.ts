@@ -28,6 +28,8 @@ export const TEST_ENV: Env = {
   NGINX_RELOAD_ENABLED: false,
   SMTP_TLS_REJECT_UNAUTHORIZED: true,
   WEBHOOK_ALLOW_PRIVATE: false,
+  PASSWORD_HIBP_ENABLED: false,
+  PASSWORD_MIN_LENGTH: 10,
   TRUST_PROXY: 0,
   SESSION_SECRET: 'a'.repeat(64),
   BACKUP_DIR: './data/backups',

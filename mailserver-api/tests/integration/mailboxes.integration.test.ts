@@ -3,6 +3,7 @@ import request from 'supertest';
 import type { Express } from 'express';
 import { createTestDb, type TestDbHandle } from '../helpers/db';
 import { createTestApp } from '../helpers/server';
+import { PolicyPasswordValidator } from '../../src/lib/password-policy';
 
 describe('/admin/api/mailboxes', () => {
   let h: TestDbHandle;
@@ -219,5 +220,76 @@ describe('/admin/api/mailboxes', () => {
       expect(h.dms.emails.has('rm@example.org')).toBe(false);
       expect(h.mailboxRepo.findById(created.body.id)).toBeUndefined();
     });
+  });
+});
+
+describe('/admin/api/mailboxes password policy', () => {
+  let h: TestDbHandle;
+  let app: Express;
+  let adminKey: string;
+
+  beforeEach(() => {
+    h = createTestDb(
+      {},
+      {
+        passwordValidator: new PolicyPasswordValidator({
+          minLength: 10,
+          hibp: true,
+          pwnedChecker: { isBreached: async (pw) => pw === 'correcthorse42' },
+        }),
+      },
+    );
+    app = createTestApp(h).app;
+    adminKey = h.apiKeyService.generateAndStore('admin', { scopes: ['admin'] }).plain;
+    h.domainRepo.create({ name: 'example.org' });
+  });
+
+  afterEach(() => h.close());
+
+  it('rejects a weak password that passes length but fails the policy', async () => {
+    const res = await request(app)
+      .post('/admin/api/mailboxes')
+      .set('X-Api-Key', adminKey)
+      .send({ address: 'weak@example.org', password: 'abcdefgh1' }); // 9 chars < minLength 10
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('WEAK_PASSWORD');
+    expect(h.dms.emails.has('weak@example.org')).toBe(false);
+  });
+
+  it('rejects a breached password', async () => {
+    const res = await request(app)
+      .post('/admin/api/mailboxes')
+      .set('X-Api-Key', adminKey)
+      .send({ address: 'pwned@example.org', password: 'correcthorse42' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/breach/i);
+    expect(h.dms.emails.has('pwned@example.org')).toBe(false);
+  });
+
+  it('accepts a strong, non-breached password', async () => {
+    const res = await request(app)
+      .post('/admin/api/mailboxes')
+      .set('X-Api-Key', adminKey)
+      .send({ address: 'ok@example.org', password: 'Gh7$kLmn92xQ' });
+
+    expect(res.status).toBe(201);
+    expect(h.dms.emails.get('ok@example.org')).toBe('Gh7$kLmn92xQ');
+  });
+
+  it('enforces the policy on password change too', async () => {
+    const created = await request(app)
+      .post('/admin/api/mailboxes')
+      .set('X-Api-Key', adminKey)
+      .send({ address: 'chg@example.org', password: 'Gh7$kLmn92xQ' });
+
+    const res = await request(app)
+      .patch(`/admin/api/mailboxes/${created.body.id}/password`)
+      .set('X-Api-Key', adminKey)
+      .send({ password: 'correcthorse42' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/breach/i);
   });
 });
