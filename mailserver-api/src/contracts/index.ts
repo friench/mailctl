@@ -154,9 +154,12 @@ export interface WebhookDeliveryDTO {
 
 // ── users ────────────────────────────────────────────────────────────────────
 
+export type UserRole = 'admin' | 'read_only' | 'domain_admin' | 'domain_read_only' | 'domain_user';
+
 export interface UserDTO {
   id: string;
   email: string;
+  role: UserRole;
   createdAt: string;
   lastLoginAt: string | null;
 }

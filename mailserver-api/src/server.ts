@@ -42,6 +42,7 @@ import { adminSettingsRouter } from './http/routes/admin/settings';
 import { createErrorHandler } from './http/middleware/error';
 import { createSessionMiddleware } from './http/middleware/session';
 import { createAdminAuth } from './http/middleware/admin-auth';
+import { createRbacGuard } from './http/middleware/rbac';
 
 export interface ServerDeps {
   env: Env;
@@ -151,6 +152,7 @@ export function createServer(deps: ServerDeps): Express {
 
   const adminAuth = createAdminAuth(apiKeyService, userRepo, logger);
   app.use('/admin/api', adminAuth);
+  app.use('/admin/api', createRbacGuard());
   app.use(adminApiKeysRouter(apiKeyService));
   app.use(adminDomainsRouter(domainService, domainDnsService));
   app.use(adminSmtpAccountsRouter(smtpAccountService));

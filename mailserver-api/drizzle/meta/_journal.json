@@ -85,6 +85,13 @@
       "when": 1783074010254,
       "tag": "0011_outgoing_the_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1783079116523,
+      "tag": "0012_tearful_molten_man",
+      "breakpoints": true
     }
   ]
 }
