@@ -1,6 +1,6 @@
 import argon2 from 'argon2';
 import { BusinessError } from '../../lib/errors';
-import type { UserRow } from '../../db/schema';
+import type { UserRole, UserRow } from '../../db/schema';
 import type { UserRepository } from './repository';
 
 const ARGON2_OPTIONS: argon2.Options = {
@@ -27,7 +27,7 @@ export class UserService {
     return this.repo.count();
   }
 
-  async create(email: string, password: string): Promise<UserRow> {
+  async create(email: string, password: string, role?: UserRole): Promise<UserRow> {
     if (!email.includes('@')) throw new BusinessError(400, 'Invalid email');
     if (password.length < MIN_PASSWORD_LENGTH) {
       throw new BusinessError(400, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
@@ -37,7 +37,14 @@ export class UserService {
       throw new BusinessError(409, 'User with this email already exists');
     }
     const passwordHash = await argon2.hash(password, ARGON2_OPTIONS);
-    return this.repo.create({ email: normalized, passwordHash });
+    return this.repo.create({ email: normalized, passwordHash, role });
+  }
+
+  updateRole(id: string, role: UserRole): UserRow {
+    const user = this.repo.findById(id);
+    if (!user) throw new BusinessError(404, 'User not found');
+    this.repo.updateRole(id, role);
+    return { ...user, role };
   }
 
   async verifyPassword(email: string, password: string): Promise<UserRow | null> {

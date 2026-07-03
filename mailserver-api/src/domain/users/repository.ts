@@ -1,11 +1,12 @@
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { Db } from '../../db/client';
-import { users, type UserRow } from '../../db/schema';
+import { users, type UserRole, type UserRow } from '../../db/schema';
 
 export interface CreateUserInput {
   email: string;
   passwordHash: string;
+  role?: UserRole;
 }
 
 export class UserRepository {
@@ -16,11 +17,16 @@ export class UserRepository {
       id: randomUUID(),
       email: input.email,
       passwordHash: input.passwordHash,
+      role: input.role ?? 'admin',
       createdAt: new Date(),
       lastLoginAt: null,
     };
     this.db.insert(users).values(row).run();
     return row;
+  }
+
+  updateRole(id: string, role: UserRole): void {
+    this.db.update(users).set({ role }).where(eq(users.id, id)).run();
   }
 
   findById(id: string): UserRow | undefined {

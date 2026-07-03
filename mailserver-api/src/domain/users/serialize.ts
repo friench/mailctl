@@ -5,6 +5,7 @@ export function serializeUser(user: UserRow): UserDTO {
   return {
     id: user.id,
     email: user.email,
+    role: user.role,
     createdAt: user.createdAt.toISOString(),
     lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
   };

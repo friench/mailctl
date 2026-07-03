@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ResourceTable, shortDate } from '../components/ResourceTable';
 import { api } from '../api';
-import type { UserDTO as UserRow } from '@contracts';
+import type { UserDTO as UserRow, UserRole } from '@contracts';
+
+const ROLES: UserRole[] = ['admin', 'read_only', 'domain_admin', 'domain_read_only', 'domain_user'];
 
 export function UsersPage() {
   return (
@@ -12,6 +14,7 @@ export function UsersPage() {
       queryKey={['users']}
       columns={[
         { key: 'email', header: 'Email', render: (r) => r.email },
+        { key: 'role', header: 'Role', render: (r) => <RoleSelect user={r} /> },
         { key: 'lastLogin', header: 'Last login', render: (r) => shortDate(r.lastLoginAt) },
         { key: 'created', header: 'Created', render: (r) => shortDate(r.createdAt) },
       ]}
@@ -21,6 +24,28 @@ export function UsersPage() {
       ]}
       rowActions={(row) => <ChangePassword userId={row.id} />}
     />
+  );
+}
+
+function RoleSelect({ user }: { user: UserRow }) {
+  const queryClient = useQueryClient();
+  const change = useMutation({
+    mutationFn: (role: UserRole) => api.patch(`/admin/api/users/${user.id}`, { role }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
+  return (
+    <select
+      value={user.role}
+      disabled={change.isPending}
+      onChange={(e) => change.mutate(e.target.value as UserRole)}
+      className="rounded border border-slate-300 px-1 py-0.5 text-xs disabled:opacity-50"
+    >
+      {ROLES.map((r) => (
+        <option key={r} value={r}>
+          {r}
+        </option>
+      ))}
+    </select>
   );
 }
 

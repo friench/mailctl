@@ -1,8 +1,19 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, primaryKey } from 'drizzle-orm/sqlite-core';
 
 /** Origin of a domain/mailbox/alias row: created in the panel, or imported from DMS. */
 export const SOURCES = ['panel', 'dms'] as const;
 export type Source = (typeof SOURCES)[number];
+
+/** RBAC roles. Global: admin / read_only. Domain-scoped: domain_admin / domain_read_only.
+ *  domain_user is an end-user (self-service, own mailbox). */
+export const USER_ROLES = [
+  'admin',
+  'read_only',
+  'domain_admin',
+  'domain_read_only',
+  'domain_user',
+] as const;
+export type UserRole = (typeof USER_ROLES)[number];
 
 // Drizzle schema. Tables added per phase:
 //   Phase 2: api_keys
@@ -154,9 +165,27 @@ export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
+  role: text('role', { enum: USER_ROLES }).notNull().default('admin'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   lastLoginAt: integer('last_login_at', { mode: 'timestamp' }),
 });
+
+/** Domains a domain-scoped user (domain_admin / domain_read_only) may manage. */
+export const userDomains = sqliteTable(
+  'user_domains',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    domainId: text('domain_id')
+      .notNull()
+      .references(() => domains.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.domainId] }),
+    userIdIdx: index('user_domains_user_id_idx').on(table.userId),
+  }),
+);
 
 export type UserRow = typeof users.$inferSelect;
 export type UserInsert = typeof users.$inferInsert;
