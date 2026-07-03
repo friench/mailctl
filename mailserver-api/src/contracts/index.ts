@@ -160,6 +160,8 @@ export interface UserDTO {
   id: string;
   email: string;
   role: UserRole;
+  /** Domains a domain-scoped user may manage (empty for global roles). */
+  assignedDomainIds: string[];
   createdAt: string;
   lastLoginAt: string | null;
 }

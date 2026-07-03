@@ -47,6 +47,15 @@ export class UserService {
     return { ...user, role };
   }
 
+  listDomainIds(id: string): string[] {
+    return this.repo.listDomainIds(id);
+  }
+
+  setDomains(id: string, domainIds: string[]): void {
+    if (!this.repo.findById(id)) throw new BusinessError(404, 'User not found');
+    this.repo.setDomains(id, domainIds);
+  }
+
   async verifyPassword(email: string, password: string): Promise<UserRow | null> {
     const user = this.repo.findByEmail(email.toLowerCase());
     if (!user) return null;

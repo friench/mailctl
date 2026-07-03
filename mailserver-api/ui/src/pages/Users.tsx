@@ -1,12 +1,18 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ResourceTable, shortDate } from '../components/ResourceTable';
 import { api } from '../api';
-import type { UserDTO as UserRow, UserRole } from '@contracts';
+import type { DomainDTO as Domain, UserDTO as UserRow, UserRole } from '@contracts';
 
 const ROLES: UserRole[] = ['admin', 'read_only', 'domain_admin', 'domain_read_only', 'domain_user'];
+const DOMAIN_ROLES = new Set<UserRole>(['domain_admin', 'domain_read_only', 'domain_user']);
 
 export function UsersPage() {
+  const domains = useQuery({
+    queryKey: ['domains'],
+    queryFn: () => api.get<Domain[]>('/admin/api/domains'),
+  });
+
   return (
     <ResourceTable<UserRow>
       title="Admin users"
@@ -15,6 +21,11 @@ export function UsersPage() {
       columns={[
         { key: 'email', header: 'Email', render: (r) => r.email },
         { key: 'role', header: 'Role', render: (r) => <RoleSelect user={r} /> },
+        {
+          key: 'domains',
+          header: 'Domains',
+          render: (r) => <DomainAssign user={r} domains={domains.data ?? []} />,
+        },
         { key: 'lastLogin', header: 'Last login', render: (r) => shortDate(r.lastLoginAt) },
         { key: 'created', header: 'Created', render: (r) => shortDate(r.createdAt) },
       ]}
@@ -24,6 +35,33 @@ export function UsersPage() {
       ]}
       rowActions={(row) => <ChangePassword userId={row.id} />}
     />
+  );
+}
+
+function DomainAssign({ user, domains }: { user: UserRow; domains: Domain[] }) {
+  const queryClient = useQueryClient();
+  const save = useMutation({
+    mutationFn: (domainIds: string[]) => api.patch(`/admin/api/users/${user.id}`, { domainIds }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
+
+  if (!DOMAIN_ROLES.has(user.role)) return <span className="text-slate-400 text-xs">–</span>;
+
+  return (
+    <select
+      multiple
+      value={user.assignedDomainIds}
+      disabled={save.isPending}
+      onChange={(e) => save.mutate(Array.from(e.target.selectedOptions, (o) => o.value))}
+      className="rounded border border-slate-300 px-1 py-0.5 text-xs disabled:opacity-50"
+      size={Math.min(Math.max(domains.length, 2), 4)}
+    >
+      {domains.map((d) => (
+        <option key={d.id} value={d.id}>
+          {d.name}
+        </option>
+      ))}
+    </select>
   );
 }
 

@@ -9,17 +9,28 @@ import {
   regenerateDkimSchema,
   updateDomainSchema,
 } from '../../validators/domains';
+import { FULL_ACCESS, assertInScope, scopeById } from '../../../lib/authz';
 
 export function adminDomainsRouter(domainService: DomainService, dnsService: DomainDnsService) {
   const router = Router();
 
-  router.get('/admin/api/domains', (_req: Request, res: Response) => {
-    res.json(domainService.list().map(serializeDomain));
+  /** Creating/removing a domain is a superadmin action even for domain admins. */
+  const requireGlobal = (req: Request, res: Response): boolean => {
+    if ((req.authz ?? FULL_ACCESS).scope !== 'all') {
+      res.status(403).json({ error: 'Forbidden: managing domains requires an admin role' });
+      return false;
+    }
+    return true;
+  };
+
+  router.get('/admin/api/domains', (req: Request, res: Response) => {
+    res.json(scopeById(req.authz ?? FULL_ACCESS, domainService.list()).map(serializeDomain));
   });
 
   router.post(
     '/admin/api/domains',
     asyncHandler(async (req: Request, res: Response) => {
+      if (!requireGlobal(req, res)) return;
       const data = createDomainSchema.parse(req.body);
       const row = await domainService.create(data);
       res.status(201).json(serializeDomain(row));
@@ -28,7 +39,7 @@ export function adminDomainsRouter(domainService: DomainService, dnsService: Dom
 
   router.get('/admin/api/domains/:id', (req: Request, res: Response) => {
     const row = domainService.findById(String(req.params.id ?? ''));
-    if (!row) {
+    if (!row || scopeById(req.authz ?? FULL_ACCESS, [row]).length === 0) {
       res.status(404).json({ error: 'Domain not found' });
       return;
     }
@@ -38,8 +49,10 @@ export function adminDomainsRouter(domainService: DomainService, dnsService: Dom
   router.patch(
     '/admin/api/domains/:id',
     asyncHandler(async (req: Request, res: Response) => {
+      const id = String(req.params.id ?? '');
+      assertInScope(req.authz ?? FULL_ACCESS, id);
       const data = updateDomainSchema.parse(req.body);
-      const row = await domainService.update(String(req.params.id ?? ''), data);
+      const row = await domainService.update(id, data);
       res.json(serializeDomain(row));
     }),
   );
@@ -47,6 +60,7 @@ export function adminDomainsRouter(domainService: DomainService, dnsService: Dom
   router.delete(
     '/admin/api/domains/:id',
     asyncHandler(async (req: Request, res: Response) => {
+      if (!requireGlobal(req, res)) return;
       await domainService.delete(String(req.params.id ?? ''));
       res.status(204).end();
     }),
@@ -55,12 +69,10 @@ export function adminDomainsRouter(domainService: DomainService, dnsService: Dom
   router.post(
     '/admin/api/domains/:id/dkim',
     asyncHandler(async (req: Request, res: Response) => {
+      const id = String(req.params.id ?? '');
+      assertInScope(req.authz ?? FULL_ACCESS, id);
       const data = regenerateDkimSchema.parse(req.body ?? {});
-      const row = await domainService.regenerateDkim(
-        String(req.params.id ?? ''),
-        data.selector,
-        data.keysize,
-      );
+      const row = await domainService.regenerateDkim(id, data.selector, data.keysize);
       res.json(serializeDomain(row));
     }),
   );
@@ -70,7 +82,7 @@ export function adminDomainsRouter(domainService: DomainService, dnsService: Dom
     asyncHandler(async (req: Request, res: Response) => {
       const id = String(req.params.id ?? '');
       const row = domainService.findById(id);
-      if (!row) {
+      if (!row || scopeById(req.authz ?? FULL_ACCESS, [row]).length === 0) {
         res.status(404).json({ error: 'Domain not found' });
         return;
       }

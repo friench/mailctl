@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { Db } from '../../db/client';
-import { users, type UserRole, type UserRow } from '../../db/schema';
+import { users, userDomains, type UserRole, type UserRow } from '../../db/schema';
 
 export interface CreateUserInput {
   email: string;
@@ -27,6 +27,24 @@ export class UserRepository {
 
   updateRole(id: string, role: UserRole): void {
     this.db.update(users).set({ role }).where(eq(users.id, id)).run();
+  }
+
+  /** Domains a domain-scoped user may manage. */
+  listDomainIds(userId: string): string[] {
+    return this.db
+      .select({ domainId: userDomains.domainId })
+      .from(userDomains)
+      .where(eq(userDomains.userId, userId))
+      .all()
+      .map((r) => r.domainId);
+  }
+
+  /** Replace the user's assigned domains. */
+  setDomains(userId: string, domainIds: string[]): void {
+    this.db.delete(userDomains).where(eq(userDomains.userId, userId)).run();
+    for (const domainId of new Set(domainIds)) {
+      this.db.insert(userDomains).values({ userId, domainId }).run();
+    }
   }
 
   findById(id: string): UserRow | undefined {

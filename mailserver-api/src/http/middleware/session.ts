@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { getIronSession, type IronSession } from 'iron-session';
 import type { UserRow } from '../../db/schema';
+import type { Authz } from '../../lib/authz';
 
 export interface SessionData {
   userId?: string;
@@ -12,6 +13,8 @@ declare global {
     interface Request {
       session: IronSession<SessionData>;
       authUser?: UserRow;
+      /** RBAC context (role scope + capabilities); set by the RBAC guard. */
+      authz?: Authz;
     }
   }
 }
