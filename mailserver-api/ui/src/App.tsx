@@ -18,6 +18,7 @@ import { FeatureFlagsPage } from './pages/FeatureFlags';
 import { BackupsPage } from './pages/Backups';
 import { StatsPage } from './pages/Stats';
 import { SelfServicePage } from './pages/SelfService';
+import { MailboxSievePage } from './pages/MailboxSieve';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,6 +67,7 @@ export default function App() {
             <Route path="domains" element={<DomainsPage />} />
             <Route path="domains/:id" element={<DomainDetailPage />} />
             <Route path="mailboxes" element={<MailboxesPage />} />
+            <Route path="mailboxes/:id/sieve" element={<MailboxSievePage />} />
             <Route path="aliases" element={<AliasesPage />} />
             <Route path="sync" element={<SyncPage />} />
             <Route path="smtp-accounts" element={<SmtpAccountsPage />} />

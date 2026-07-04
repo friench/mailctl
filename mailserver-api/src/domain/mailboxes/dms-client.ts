@@ -10,6 +10,8 @@ export interface DmsClient {
   setSendRestricted(address: string, restricted: boolean): Promise<void>;
   /** Block/unblock inbound mail for an address (docker-mailserver `email restrict … receive`). */
   setReceiveRestricted(address: string, restricted: boolean): Promise<void>;
+  /** Install the active per-user Sieve script (`~/.dovecot.sieve`) for an address. */
+  writeSieve(address: string, script: string): Promise<void>;
   generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void>;
   readDkimPublicKey(domain: string, selector: string): Promise<string>;
   // Read-only enumeration used by the DMS↔DB reconciliation feature.

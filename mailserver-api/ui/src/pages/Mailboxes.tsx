@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ResourceTable, formatBoolean, shortDate } from '../components/ResourceTable';
 import { api } from '../api';
@@ -280,6 +281,12 @@ function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alia
       >
         {mailbox.receiveBlocked ? 'Allow receive' : 'Block receive'}
       </button>
+      <Link
+        to={`/admin/mailboxes/${mailbox.id}/sieve`}
+        className="text-indigo-600 hover:underline text-xs"
+      >
+        Filters
+      </Link>
       {settings.data?.autoconfigEnabled && (
         <a
           href={`/mail/mobileconfig?email=${encodeURIComponent(mailbox.address)}`}

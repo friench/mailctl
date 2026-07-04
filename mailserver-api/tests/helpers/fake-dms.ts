@@ -20,6 +20,7 @@ export class FakeDmsClient implements DmsClient {
   public aliases = new Map<string, string>();
   public sendRestricted = new Set<string>();
   public receiveRestricted = new Set<string>();
+  public sieve = new Map<string, string>();
   public calls: Array<{ method: string; args: unknown[] }> = [];
   public errors: Partial<Record<keyof DmsClient, Error>> = {};
 
@@ -74,6 +75,13 @@ export class FakeDmsClient implements DmsClient {
     if (this.errors.setReceiveRestricted) throw this.errors.setReceiveRestricted;
     if (restricted) this.receiveRestricted.add(address);
     else this.receiveRestricted.delete(address);
+  }
+
+  async writeSieve(address: string, script: string): Promise<void> {
+    this.calls.push({ method: 'writeSieve', args: [address, script] });
+    if (this.errors.writeSieve) throw this.errors.writeSieve;
+    if (script) this.sieve.set(address, script);
+    else this.sieve.delete(address);
   }
 
   async generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void> {

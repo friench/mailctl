@@ -124,6 +124,30 @@ export const aliases = sqliteTable(
 export type AliasRow = typeof aliases.$inferSelect;
 export type AliasInsert = typeof aliases.$inferInsert;
 
+/** A single incoming-mail filter rule (compiled into Sieve). */
+export interface SieveRule {
+  field: 'from' | 'to' | 'subject';
+  contains: string;
+  action: 'fileinto' | 'redirect' | 'discard';
+  /** Destination folder (fileinto) or address (redirect); unused for discard. */
+  arg?: string;
+}
+
+/** Per-mailbox Sieve config: a vacation autoresponder + filter rules. */
+export const mailboxSieve = sqliteTable('mailbox_sieve', {
+  mailboxId: text('mailbox_id')
+    .primaryKey()
+    .references(() => mailboxes.id, { onDelete: 'cascade' }),
+  vacationEnabled: integer('vacation_enabled', { mode: 'boolean' }).notNull().default(false),
+  vacationSubject: text('vacation_subject'),
+  vacationMessage: text('vacation_message'),
+  vacationDays: integer('vacation_days').notNull().default(7),
+  rules: text('rules', { mode: 'json' }).$type<SieveRule[]>().notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export type MailboxSieveRow = typeof mailboxSieve.$inferSelect;
+
 export interface SendJobPayload {
   to: string;
   subject: string;

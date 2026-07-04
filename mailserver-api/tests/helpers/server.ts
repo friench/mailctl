@@ -84,6 +84,7 @@ export function createTestApp(h: TestDbHandle, env: Env = TEST_ENV): TestAppHand
     smtpAccountService,
     mailboxService: h.mailboxService,
     aliasService: h.aliasService,
+    sieveService: h.sieveService,
     syncService: h.syncService,
     sendJobService,
     userRepo: h.userRepo,

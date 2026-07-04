@@ -1,9 +1,11 @@
 import { Router, type Request, type Response } from 'express';
 import type { MailboxService } from '../../../domain/mailboxes/service';
 import type { UserService } from '../../../domain/users/service';
+import type { SieveService } from '../../../domain/sieve/service';
 import { serializeMailbox } from '../../../domain/mailboxes/serialize';
 import { asyncHandler } from '../../../lib/async-handler';
 import { changePasswordSchema } from '../../validators/users';
+import { sieveConfigSchema } from '../../validators/sieve';
 import type { SelfServiceDTO } from '../../../contracts';
 
 /**
@@ -11,8 +13,18 @@ import type { SelfServiceDTO } from '../../../contracts';
  * their account email). Available to any authenticated role (the RBAC guard
  * allow-lists `/me`); each action only ever touches the caller's own mailbox.
  */
-export function adminMeRouter(mailboxService: MailboxService, userService: UserService) {
+export function adminMeRouter(
+  mailboxService: MailboxService,
+  userService: UserService,
+  sieveService: SieveService,
+) {
   const router = Router();
+
+  const ownMailboxId = (req: Request): string | null => {
+    const email = req.authUser?.email;
+    const mailbox = email ? mailboxService.findByAddress(email) : undefined;
+    return mailbox?.id ?? null;
+  };
 
   router.get('/admin/api/me', (req: Request, res: Response) => {
     const email = req.authUser?.email;
@@ -34,6 +46,28 @@ export function adminMeRouter(mailboxService: MailboxService, userService: UserS
       if (mailbox) await mailboxService.updatePassword(mailbox.id, password);
       await userService.changePassword(user.id, password);
       res.status(204).end();
+    }),
+  );
+
+  router.get('/admin/api/me/sieve', (req: Request, res: Response) => {
+    const id = ownMailboxId(req);
+    if (!id) {
+      res.status(404).json({ error: 'No mailbox linked to this account' });
+      return;
+    }
+    res.json(sieveService.get(id));
+  });
+
+  router.put(
+    '/admin/api/me/sieve',
+    asyncHandler(async (req: Request, res: Response) => {
+      const id = ownMailboxId(req);
+      if (!id) {
+        res.status(404).json({ error: 'No mailbox linked to this account' });
+        return;
+      }
+      const config = sieveConfigSchema.parse(req.body);
+      res.json(await sieveService.set(id, config));
     }),
   );
 

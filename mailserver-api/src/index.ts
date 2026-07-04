@@ -17,6 +17,8 @@ import { MailboxService } from './domain/mailboxes/service';
 import { PolicyPasswordValidator } from './lib/password-policy';
 import { DockerodeDmsClient } from './domain/mailboxes/dockerode-dms-client';
 import { AliasRepository } from './domain/aliases/repository';
+import { SieveRepository } from './domain/sieve/repository';
+import { SieveService } from './domain/sieve/service';
 import { AliasService } from './domain/aliases/service';
 import { SyncService } from './domain/sync/service';
 import { SendJobRepository } from './domain/queue/repository';
@@ -105,6 +107,8 @@ const mailboxService = new MailboxService(
 
 const aliasRepo = new AliasRepository(dbClient.db);
 const aliasService = new AliasService(aliasRepo, domainRepo, dmsClient);
+const sieveRepo = new SieveRepository(dbClient.db);
+const sieveService = new SieveService(sieveRepo, mailboxRepo, dmsClient);
 const syncService = new SyncService(dmsClient, domainRepo, mailboxRepo, aliasRepo, logger);
 
 const nginxReloader = env.NGINX_RELOAD_ENABLED
@@ -208,6 +212,7 @@ const app = createServer({
   smtpAccountService,
   mailboxService,
   aliasService,
+  sieveService,
   syncService,
   sendJobService,
   userRepo,
