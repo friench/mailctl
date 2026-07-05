@@ -265,6 +265,20 @@ export interface BackupsResponseDTO {
   items: BackupItemDTO[];
 }
 
+// ── sieve (filters + vacation) ───────────────────────────────────────────────
+
+export interface SieveRuleDTO {
+  field: 'from' | 'to' | 'subject';
+  contains: string;
+  action: 'fileinto' | 'redirect' | 'discard';
+  arg?: string;
+}
+
+export interface SieveConfigDTO {
+  vacation: { enabled: boolean; subject: string; message: string; days: number };
+  rules: SieveRuleDTO[];
+}
+
 // ── self-service ─────────────────────────────────────────────────────────────
 
 export interface SelfServiceDTO {

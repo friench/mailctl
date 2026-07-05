@@ -92,6 +92,20 @@ export class DockerodeDmsClient implements DmsClient {
     await this.runSetup(['email', 'restrict', restricted ? 'add' : 'del', 'receive', address]);
   }
 
+  async writeSieve(address: string, script: string): Promise<void> {
+    const [local, domain] = address.toLowerCase().split('@');
+    if (!local || !domain || !/^[a-z0-9._%+=-]+$/.test(local) || !/^[a-z0-9.-]+$/.test(domain)) {
+      throw new Error(`Unsafe mailbox address for Sieve: ${address}`);
+    }
+    const home = `/var/mail/${domain}/${local}/home`;
+    const file = `${home}/.dovecot.sieve`;
+    // No shell: mkdir the Dovecot home, tee the script from stdin, then hand the
+    // file to the vmail user so Dovecot can compile it (best-effort).
+    await this.runRaw(['mkdir', '-p', home]);
+    await this.runRawWithInput(['tee', file], script);
+    await this.runRaw(['chown', '5000:5000', file]).catch(() => undefined);
+  }
+
   async generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void> {
     await this.runSetup([
       'config',
@@ -178,6 +192,50 @@ export class DockerodeDmsClient implements DmsClient {
 
   private async runSetup(args: string[]): Promise<{ stdout: string; stderr: string }> {
     return this.runRaw(['setup', ...args]);
+  }
+
+  /** Like {@link runRaw} but pipes `input` to the command's stdin. */
+  private async runRawWithInput(
+    cmd: string[],
+    input: string,
+  ): Promise<{ stdout: string; stderr: string }> {
+    const container = this.docker.getContainer(this.containerName);
+    const exec = await container.exec({
+      Cmd: cmd,
+      AttachStdin: true,
+      AttachStdout: true,
+      AttachStderr: true,
+    });
+
+    const stream = await exec.start({ hijack: true, stdin: true });
+
+    const stdoutBuf: Buffer[] = [];
+    const stderrBuf: Buffer[] = [];
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    stdout.on('data', (c: Buffer) => stdoutBuf.push(c));
+    stderr.on('data', (c: Buffer) => stderrBuf.push(c));
+    this.docker.modem.demuxStream(stream, stdout, stderr);
+
+    stream.write(input);
+    stream.end();
+
+    await new Promise<void>((resolve, reject) => {
+      stream.on('end', () => resolve());
+      stream.on('error', reject);
+    });
+
+    const inspect = await exec.inspect();
+    const out = Buffer.concat(stdoutBuf).toString('utf-8');
+    const err = Buffer.concat(stderrBuf).toString('utf-8');
+    if (inspect.ExitCode !== 0) {
+      this.logger?.warn(
+        { cmd, exitCode: inspect.ExitCode, stderr: err },
+        'DMS exec (stdin) failed',
+      );
+      throw new Error(`${cmd[0]} exited ${inspect.ExitCode}: ${err.trim() || out.trim()}`);
+    }
+    return { stdout: out, stderr: err };
   }
 
   private async runRaw(cmd: string[]): Promise<{ stdout: string; stderr: string }> {

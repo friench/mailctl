@@ -13,6 +13,7 @@ import type { DomainDnsService } from './domain/domains/dns-service';
 import type { SmtpAccountService } from './domain/smtp-accounts/service';
 import type { MailboxService } from './domain/mailboxes/service';
 import type { AliasService } from './domain/aliases/service';
+import type { SieveService } from './domain/sieve/service';
 import type { SyncService } from './domain/sync/service';
 import type { SendJobService } from './domain/queue/service';
 import type { UserRepository } from './domain/users/repository';
@@ -55,6 +56,7 @@ export interface ServerDeps {
   smtpAccountService: SmtpAccountService;
   mailboxService: MailboxService;
   aliasService: AliasService;
+  sieveService: SieveService;
   syncService: SyncService;
   sendJobService: SendJobService;
   userRepo: UserRepository;
@@ -76,6 +78,7 @@ export function createServer(deps: ServerDeps): Express {
     smtpAccountService,
     mailboxService,
     aliasService,
+    sieveService,
     syncService,
     sendJobService,
     userRepo,
@@ -157,11 +160,11 @@ export function createServer(deps: ServerDeps): Express {
   app.use(adminApiKeysRouter(apiKeyService));
   app.use(adminDomainsRouter(domainService, domainDnsService));
   app.use(adminSmtpAccountsRouter(smtpAccountService));
-  app.use(adminMailboxesRouter(mailboxService, domainService));
+  app.use(adminMailboxesRouter(mailboxService, domainService, sieveService));
   app.use(adminAliasesRouter(aliasService, domainService));
   app.use(adminSyncRouter(syncService));
   app.use(adminUsersRouter(userService));
-  app.use(adminMeRouter(mailboxService, userService));
+  app.use(adminMeRouter(mailboxService, userService, sieveService));
   app.use(adminWebhooksRouter(webhookService));
   app.use(adminFeatureFlagsRouter(featureFlagService));
   app.use(adminStatsRouter(statsService));

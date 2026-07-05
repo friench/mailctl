@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import type { MailboxService } from '../../../domain/mailboxes/service';
 import type { DomainService } from '../../../domain/domains/service';
+import type { SieveService } from '../../../domain/sieve/service';
 import { serializeMailbox } from '../../../domain/mailboxes/serialize';
 import { asyncHandler } from '../../../lib/async-handler';
 import { domainOf } from '../../../lib/address';
@@ -11,8 +12,13 @@ import {
   updateMailboxSchema,
   updatePasswordSchema,
 } from '../../validators/mailboxes';
+import { sieveConfigSchema } from '../../validators/sieve';
 
-export function adminMailboxesRouter(service: MailboxService, domainService: DomainService) {
+export function adminMailboxesRouter(
+  service: MailboxService,
+  domainService: DomainService,
+  sieveService: SieveService,
+) {
   const router = Router();
 
   /** Load a mailbox only when it is within the actor's domain scope (else null). */
@@ -84,6 +90,28 @@ export function adminMailboxesRouter(service: MailboxService, domainService: Dom
       }
       await service.delete(id);
       res.status(204).end();
+    }),
+  );
+
+  router.get('/admin/api/mailboxes/:id/sieve', (req: Request, res: Response) => {
+    const id = String(req.params.id ?? '');
+    if (!scopedFindById(req, id)) {
+      res.status(404).json({ error: 'Mailbox not found' });
+      return;
+    }
+    res.json(sieveService.get(id));
+  });
+
+  router.put(
+    '/admin/api/mailboxes/:id/sieve',
+    asyncHandler(async (req: Request, res: Response) => {
+      const id = String(req.params.id ?? '');
+      if (!scopedFindById(req, id)) {
+        res.status(404).json({ error: 'Mailbox not found' });
+        return;
+      }
+      const config = sieveConfigSchema.parse(req.body);
+      res.json(await sieveService.set(id, config));
     }),
   );
 

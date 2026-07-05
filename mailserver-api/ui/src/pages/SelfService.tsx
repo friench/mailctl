@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import type { AppSettingsDTO, SelfServiceDTO } from '@contracts';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { SieveEditor } from '../components/SieveEditor';
 
 export function SelfServicePage() {
   const { user, logout } = useAuth();
@@ -110,6 +111,13 @@ export function SelfServicePage() {
             </p>
           )}
         </section>
+
+        {mailbox && (
+          <section>
+            <h2 className="mb-3 font-semibold text-slate-900">Filters &amp; vacation</h2>
+            <SieveEditor endpoint="/admin/api/me/sieve" queryKey={['me-sieve']} />
+          </section>
+        )}
       </main>
     </div>
   );
