@@ -42,6 +42,12 @@ export const FLAG_DEFINITIONS: readonly FlagDefinition[] = [
     description:
       'Periodically compute DMS↔DB divergence and notify (log + webhook) when it exists. Never auto-applies.',
   },
+  {
+    key: 'quarantine_retention_enabled',
+    default: false,
+    description:
+      'Periodically expunge spam older than QUARANTINE_RETENTION_DAYS from every mailbox Junk folder.',
+  },
 ] as const;
 
 export const KNOWN_FLAG_KEYS = new Set(FLAG_DEFINITIONS.map((f) => f.key));

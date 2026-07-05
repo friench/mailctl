@@ -19,6 +19,7 @@ import { DockerodeDmsClient } from './domain/mailboxes/dockerode-dms-client';
 import { AliasRepository } from './domain/aliases/repository';
 import { SieveRepository } from './domain/sieve/repository';
 import { SieveService } from './domain/sieve/service';
+import { QuarantineService } from './domain/quarantine/service';
 import { AliasService } from './domain/aliases/service';
 import { SyncService } from './domain/sync/service';
 import { SendJobRepository } from './domain/queue/repository';
@@ -40,6 +41,7 @@ import { WebhookWorker } from './workers/webhook-worker';
 import { SyncWorker } from './workers/sync-worker';
 import { BackupWorker } from './workers/backup-worker';
 import { RetentionWorker } from './workers/retention-worker';
+import { QuarantineRetentionWorker } from './workers/quarantine-retention-worker';
 import { TempAliasWorker } from './workers/temp-alias-worker';
 import { createServer } from './server';
 
@@ -75,6 +77,7 @@ const dmsClient = new DockerodeDmsClient({
   socketPath: env.DOCKER_SOCKET_PATH,
   containerName: env.DMS_CONTAINER_NAME,
   logger,
+  spamMailbox: env.SPAM_MAILBOX,
 });
 const mailboxRepo = new MailboxRepository(dbClient.db);
 
@@ -109,6 +112,7 @@ const aliasRepo = new AliasRepository(dbClient.db);
 const aliasService = new AliasService(aliasRepo, domainRepo, dmsClient);
 const sieveRepo = new SieveRepository(dbClient.db);
 const sieveService = new SieveService(sieveRepo, mailboxRepo, dmsClient);
+const quarantineService = new QuarantineService(mailboxRepo, dmsClient, logger);
 const syncService = new SyncService(dmsClient, domainRepo, mailboxRepo, aliasRepo, logger);
 
 const nginxReloader = env.NGINX_RELOAD_ENABLED
@@ -184,6 +188,14 @@ retentionWorker.start();
 const tempAliasWorker = new TempAliasWorker(aliasService, logger);
 tempAliasWorker.start();
 
+const quarantineRetentionWorker = new QuarantineRetentionWorker(
+  quarantineService,
+  mailboxRepo,
+  logger,
+  { retentionDays: env.QUARANTINE_RETENTION_DAYS, flags: featureFlagService },
+);
+quarantineRetentionWorker.start();
+
 async function bootstrapAdmin(): Promise<void> {
   if (userRepo.count() > 0) return;
   if (!env.INITIAL_ADMIN_EMAIL || !env.INITIAL_ADMIN_PASSWORD) {
@@ -213,6 +225,7 @@ const app = createServer({
   mailboxService,
   aliasService,
   sieveService,
+  quarantineService,
   syncService,
   sendJobService,
   userRepo,
@@ -236,6 +249,7 @@ async function shutdown(signal: string) {
     backupWorker.stop(),
     retentionWorker.stop(),
     tempAliasWorker.stop(),
+    quarantineRetentionWorker.stop(),
   ]);
   server.close(() => {
     logger.info('HTTP server closed');

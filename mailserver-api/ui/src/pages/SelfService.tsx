@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import type { AppSettingsDTO, SelfServiceDTO } from '@contracts';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { AppSettingsDTO, QuarantineBoxDTO, SelfServiceDTO } from '@contracts';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { SieveEditor } from '../components/SieveEditor';
+import { QuarantineMessages } from '../components/QuarantineMessages';
 
 export function SelfServicePage() {
   const { user, logout } = useAuth();
@@ -113,6 +114,13 @@ export function SelfServicePage() {
         </section>
 
         {mailbox && (
+          <section className="rounded border border-slate-200 bg-white p-4">
+            <h2 className="mb-3 font-semibold text-slate-900">Spam quarantine</h2>
+            <MyQuarantine />
+          </section>
+        )}
+
+        {mailbox && (
           <section>
             <h2 className="mb-3 font-semibold text-slate-900">Filters &amp; vacation</h2>
             <SieveEditor endpoint="/admin/api/me/sieve" queryKey={['me-sieve']} />
@@ -120,5 +128,34 @@ export function SelfServicePage() {
         )}
       </main>
     </div>
+  );
+}
+
+/** The caller's own spam quarantine (Junk folder) with release/delete actions. */
+function MyQuarantine() {
+  const queryClient = useQueryClient();
+  const queryKey = ['me-quarantine'];
+  const box = useQuery({
+    queryKey,
+    queryFn: () => api.get<QuarantineBoxDTO>('/admin/api/me/quarantine'),
+  });
+  const act = useMutation({
+    mutationFn: ({ uid, action }: { uid: number; action: 'release' | 'delete' }) =>
+      action === 'release'
+        ? api.post(`/admin/api/me/quarantine/${uid}/release`)
+        : api.delete(`/admin/api/me/quarantine/${uid}`),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey }),
+  });
+
+  if (box.isLoading) return <p className="text-sm text-slate-500">Loading…</p>;
+
+  return (
+    <QuarantineMessages
+      messages={box.data?.messages ?? []}
+      viewHref={(uid) => `/admin/api/me/quarantine/${uid}`}
+      busy={act.isPending}
+      onRelease={(uid) => act.mutate({ uid, action: 'release' })}
+      onDelete={(uid) => act.mutate({ uid, action: 'delete' })}
+    />
   );
 }
