@@ -23,6 +23,7 @@ import { QuarantinePage } from './pages/Quarantine';
 import { AccessListsPage } from './pages/AccessLists';
 import { EnginePage } from './pages/Engine';
 import { OpsPage } from './pages/Ops';
+import { MigrationsPage } from './pages/Migrations';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="access-lists" element={<AccessListsPage />} />
             <Route path="engine" element={<EnginePage />} />
             <Route path="ops" element={<OpsPage />} />
+            <Route path="migrations" element={<MigrationsPage />} />
             <Route path="sync" element={<SyncPage />} />
             <Route path="smtp-accounts" element={<SmtpAccountsPage />} />
             <Route path="api-keys" element={<ApiKeysPage />} />

@@ -14,6 +14,7 @@ const NAV = [
   { to: '/admin/access-lists', label: 'Allow / deny' },
   { to: '/admin/engine', label: 'Engine' },
   { to: '/admin/ops', label: 'Operations' },
+  { to: '/admin/migrations', label: 'Migrations' },
   { to: '/admin/sync', label: 'Sync' },
   { to: '/admin/smtp-accounts', label: 'SMTP accounts' },
   { to: '/admin/api-keys', label: 'API keys' },

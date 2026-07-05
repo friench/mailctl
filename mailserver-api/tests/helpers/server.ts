@@ -99,6 +99,7 @@ export function createTestApp(h: TestDbHandle, env: Env = TEST_ENV): TestAppHand
     accessListService: h.accessListService,
     engineService,
     opsService,
+    migrationService: h.migrationService,
     syncService: h.syncService,
     sendJobService,
     userRepo: h.userRepo,

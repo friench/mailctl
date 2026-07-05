@@ -177,6 +177,40 @@ export const accessRules = sqliteTable(
 export type AccessRuleRow = typeof accessRules.$inferSelect;
 export type AccessRuleInsert = typeof accessRules.$inferInsert;
 
+export const MIGRATION_STATUSES = ['pending', 'processing', 'done', 'failed'] as const;
+export type MigrationStatus = (typeof MIGRATION_STATUSES)[number];
+export const IMAP_SSL_MODES = ['imaps', 'starttls', 'none'] as const;
+export type ImapSslMode = (typeof IMAP_SSL_MODES)[number];
+
+/**
+ * A one-shot IMAP import job: pull a remote mailbox into a local address via
+ * Dovecot dsync. `sourcePasswordEnc` holds the source password encrypted at rest
+ * (SecretBox); it is wiped once the job reaches a terminal state.
+ */
+export const migrationJobs = sqliteTable(
+  'migration_jobs',
+  {
+    id: text('id').primaryKey(),
+    sourceHost: text('source_host').notNull(),
+    sourcePort: integer('source_port').notNull(),
+    sourceUser: text('source_user').notNull(),
+    sourceSsl: text('source_ssl', { enum: IMAP_SSL_MODES }).notNull(),
+    sourcePasswordEnc: text('source_password_enc'),
+    destAddress: text('dest_address').notNull(),
+    status: text('status', { enum: MIGRATION_STATUSES }).notNull().default('pending'),
+    log: text('log'),
+    error: text('error'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    startedAt: integer('started_at', { mode: 'timestamp' }),
+    completedAt: integer('completed_at', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    statusIdx: index('migration_jobs_status_idx').on(table.status),
+  }),
+);
+
+export type MigrationJobRow = typeof migrationJobs.$inferSelect;
+
 export interface SendJobPayload {
   to: string;
   subject: string;

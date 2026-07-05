@@ -17,6 +17,9 @@ import { SieveService } from '../../src/domain/sieve/service';
 import { QuarantineService } from '../../src/domain/quarantine/service';
 import { AccessRuleRepository } from '../../src/domain/access-lists/repository';
 import { AccessListService } from '../../src/domain/access-lists/service';
+import { MigrationJobRepository } from '../../src/domain/migrations/repository';
+import { MigrationService } from '../../src/domain/migrations/service';
+import { makeSecretBox } from '../../src/lib/secret-box';
 import { SyncService } from '../../src/domain/sync/service';
 import { SendJobRepository } from '../../src/domain/queue/repository';
 import { UserRepository } from '../../src/domain/users/repository';
@@ -30,6 +33,7 @@ import { createLogger } from '../../src/logger';
 import { FakeDmsClient } from './fake-dms';
 import { FakeEngineClient } from './fake-engine';
 import { FakeOpsClient } from './fake-ops';
+import { FakeMigrator } from './fake-migrator';
 
 const silentLogger = createLogger({ NODE_ENV: 'test', LOG_LEVEL: 'silent' });
 
@@ -83,6 +87,8 @@ export interface TestDbHandle {
   sieveService: SieveService;
   quarantineService: QuarantineService;
   accessListService: AccessListService;
+  migrationService: MigrationService;
+  migrator: FakeMigrator;
   syncService: SyncService;
   sendJobRepo: SendJobRepository;
   userRepo: UserRepository;
@@ -155,6 +161,14 @@ export function createTestDb(
     dms,
     silentLogger,
   );
+  const migrator = new FakeMigrator();
+  const migrationService = new MigrationService(
+    new MigrationJobRepository(client.db),
+    migrator,
+    mailboxRepo,
+    makeSecretBox('a'.repeat(64)),
+    silentLogger,
+  );
   const syncService = new SyncService(dms, domainRepo, mailboxRepo, aliasRepo, silentLogger);
 
   const dnsResolver = new StubDnsResolver();
@@ -177,6 +191,8 @@ export function createTestDb(
     sieveService,
     quarantineService,
     accessListService,
+    migrationService,
+    migrator,
     syncService,
     sendJobRepo,
     userRepo,
