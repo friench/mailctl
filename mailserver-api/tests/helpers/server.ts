@@ -9,6 +9,7 @@ import { NginxService } from '../../src/domain/nginx/service';
 import { NullNginxReloader } from '../../src/domain/nginx/reloader';
 import { BackupService } from '../../src/domain/backups/service';
 import { StatsService } from '../../src/domain/stats/service';
+import { EngineService } from '../../src/domain/engine/service';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -76,6 +77,10 @@ export function createTestApp(h: TestDbHandle, env: Env = TEST_ENV): TestAppHand
     logger,
   });
   const statsService = new StatsService(h.client.db);
+  const engineService = new EngineService(h.engineClient, {
+    containers: ['mailserver', 'nginx', 'mail-api'],
+    rspamdUiUrl: null,
+  });
   const app = createServer({
     env,
     logger,
@@ -89,6 +94,7 @@ export function createTestApp(h: TestDbHandle, env: Env = TEST_ENV): TestAppHand
     sieveService: h.sieveService,
     quarantineService: h.quarantineService,
     accessListService: h.accessListService,
+    engineService,
     syncService: h.syncService,
     sendJobService,
     userRepo: h.userRepo,

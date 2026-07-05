@@ -374,6 +374,30 @@ register(
   (body) => client.post('/admin/api/sync/apply', body),
 );
 
+// ---- engine observability ----
+register(
+  'get_engine_overview',
+  {
+    title: 'Engine overview',
+    description:
+      'Rspamd/Dovecot stats, docker-mailserver feature toggles, and container status (GET /admin/api/engine/overview).',
+    readOnly: true,
+  },
+  {},
+  () => client.get('/admin/api/engine/overview'),
+);
+
+register(
+  'restart_container',
+  {
+    title: 'Restart container',
+    description: 'Restart an allow-listed mail-stack container (mailserver, nginx, mail-api).',
+    destructive: true,
+  },
+  { name: z.string() },
+  ({ name }) => client.post(`/admin/api/engine/containers/${seg(name)}/restart`),
+);
+
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);

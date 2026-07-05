@@ -22,6 +22,8 @@ import { SieveService } from './domain/sieve/service';
 import { QuarantineService } from './domain/quarantine/service';
 import { AccessRuleRepository } from './domain/access-lists/repository';
 import { AccessListService } from './domain/access-lists/service';
+import { DockerodeEngineClient } from './domain/engine/engine-client';
+import { EngineService } from './domain/engine/service';
 import { AliasService } from './domain/aliases/service';
 import { SyncService } from './domain/sync/service';
 import { SendJobRepository } from './domain/queue/repository';
@@ -119,6 +121,20 @@ const accessListService = new AccessListService(
   new AccessRuleRepository(dbClient.db),
   dmsClient,
   logger,
+);
+
+const engineContainers = env.ENGINE_CONTAINERS
+  ? env.ENGINE_CONTAINERS.split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : [env.DMS_CONTAINER_NAME, env.NGINX_CONTAINER_NAME, 'mail-api'];
+const engineService = new EngineService(
+  new DockerodeEngineClient({
+    socketPath: env.DOCKER_SOCKET_PATH,
+    dmsContainerName: env.DMS_CONTAINER_NAME,
+    logger,
+  }),
+  { containers: engineContainers, rspamdUiUrl: env.RSPAMD_UI_URL ?? null },
 );
 const syncService = new SyncService(dmsClient, domainRepo, mailboxRepo, aliasRepo, logger);
 
@@ -234,6 +250,7 @@ const app = createServer({
   sieveService,
   quarantineService,
   accessListService,
+  engineService,
   syncService,
   sendJobService,
   userRepo,

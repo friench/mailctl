@@ -315,6 +315,43 @@ export interface AccessRuleDTO {
   createdAt: string;
 }
 
+// ── engine observability ─────────────────────────────────────────────────────
+
+export interface RspamdStatDTO {
+  scanned: number;
+  spam: number;
+  ham: number;
+  learned: number;
+  /** action name → message count */
+  actions: Record<string, number>;
+}
+
+export interface DoveadmStatsDTO {
+  columns: string[];
+  rows: string[][];
+}
+
+export interface DmsSettingDTO {
+  key: string;
+  value: string;
+  enabled: boolean;
+}
+
+export interface ContainerStatusDTO {
+  name: string;
+  state: string;
+  health: string | null;
+  image: string | null;
+  startedAt: string | null;
+}
+
+export interface EngineOverviewDTO {
+  rspamd: { enabled: boolean; uiUrl: string | null; stat: RspamdStatDTO | null };
+  dovecot: { stats: DoveadmStatsDTO };
+  features: DmsSettingDTO[];
+  containers: ContainerStatusDTO[];
+}
+
 // ── self-service ─────────────────────────────────────────────────────────────
 
 export interface SelfServiceDTO {
