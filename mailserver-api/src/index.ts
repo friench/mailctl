@@ -20,6 +20,8 @@ import { AliasRepository } from './domain/aliases/repository';
 import { SieveRepository } from './domain/sieve/repository';
 import { SieveService } from './domain/sieve/service';
 import { QuarantineService } from './domain/quarantine/service';
+import { AccessRuleRepository } from './domain/access-lists/repository';
+import { AccessListService } from './domain/access-lists/service';
 import { AliasService } from './domain/aliases/service';
 import { SyncService } from './domain/sync/service';
 import { SendJobRepository } from './domain/queue/repository';
@@ -113,6 +115,11 @@ const aliasService = new AliasService(aliasRepo, domainRepo, dmsClient);
 const sieveRepo = new SieveRepository(dbClient.db);
 const sieveService = new SieveService(sieveRepo, mailboxRepo, dmsClient);
 const quarantineService = new QuarantineService(mailboxRepo, dmsClient, logger);
+const accessListService = new AccessListService(
+  new AccessRuleRepository(dbClient.db),
+  dmsClient,
+  logger,
+);
 const syncService = new SyncService(dmsClient, domainRepo, mailboxRepo, aliasRepo, logger);
 
 const nginxReloader = env.NGINX_RELOAD_ENABLED
@@ -226,6 +233,7 @@ const app = createServer({
   aliasService,
   sieveService,
   quarantineService,
+  accessListService,
   syncService,
   sendJobService,
   userRepo,

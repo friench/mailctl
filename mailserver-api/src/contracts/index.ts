@@ -299,6 +299,22 @@ export interface QuarantineBoxDTO {
   messages: QuarantineMessageDTO[];
 }
 
+// ── allow / deny lists ───────────────────────────────────────────────────────
+
+export type AccessMatchTypeDTO = 'email' | 'domain' | 'ip';
+export type AccessActionDTO = 'allow' | 'block';
+
+export interface AccessRuleDTO {
+  id: string;
+  matchType: AccessMatchTypeDTO;
+  action: AccessActionDTO;
+  value: string;
+  /** Mailbox this rule is scoped to, or null when it applies globally. */
+  recipient: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
 // ── self-service ─────────────────────────────────────────────────────────────
 
 export interface SelfServiceDTO {

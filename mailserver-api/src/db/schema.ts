@@ -148,6 +148,35 @@ export const mailboxSieve = sqliteTable('mailbox_sieve', {
 
 export type MailboxSieveRow = typeof mailboxSieve.$inferSelect;
 
+/** Allow/deny list rule match kinds and actions. */
+export const ACCESS_MATCH_TYPES = ['email', 'domain', 'ip'] as const;
+export type AccessMatchType = (typeof ACCESS_MATCH_TYPES)[number];
+export const ACCESS_ACTIONS = ['allow', 'block'] as const;
+export type AccessAction = (typeof ACCESS_ACTIONS)[number];
+
+/**
+ * A sender/domain/IP allow- or block-list entry. `recipient` scopes the rule to
+ * one mailbox (per-recipient override); NULL means it applies globally.
+ */
+export const accessRules = sqliteTable(
+  'access_rules',
+  {
+    id: text('id').primaryKey(),
+    matchType: text('match_type', { enum: ACCESS_MATCH_TYPES }).notNull(),
+    action: text('action', { enum: ACCESS_ACTIONS }).notNull(),
+    value: text('value').notNull(),
+    recipient: text('recipient'),
+    note: text('note'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => ({
+    lookupIdx: index('access_rules_lookup_idx').on(table.matchType, table.value),
+  }),
+);
+
+export type AccessRuleRow = typeof accessRules.$inferSelect;
+export type AccessRuleInsert = typeof accessRules.$inferInsert;
+
 export interface SendJobPayload {
   to: string;
   subject: string;

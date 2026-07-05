@@ -20,6 +20,7 @@ import { StatsPage } from './pages/Stats';
 import { SelfServicePage } from './pages/SelfService';
 import { MailboxSievePage } from './pages/MailboxSieve';
 import { QuarantinePage } from './pages/Quarantine';
+import { AccessListsPage } from './pages/AccessLists';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,6 +72,7 @@ export default function App() {
             <Route path="mailboxes/:id/sieve" element={<MailboxSievePage />} />
             <Route path="aliases" element={<AliasesPage />} />
             <Route path="quarantine" element={<QuarantinePage />} />
+            <Route path="access-lists" element={<AccessListsPage />} />
             <Route path="sync" element={<SyncPage />} />
             <Route path="smtp-accounts" element={<SmtpAccountsPage />} />
             <Route path="api-keys" element={<ApiKeysPage />} />

@@ -15,6 +15,7 @@ import type { MailboxService } from './domain/mailboxes/service';
 import type { AliasService } from './domain/aliases/service';
 import type { SieveService } from './domain/sieve/service';
 import type { QuarantineService } from './domain/quarantine/service';
+import type { AccessListService } from './domain/access-lists/service';
 import type { SyncService } from './domain/sync/service';
 import type { SendJobService } from './domain/queue/service';
 import type { UserRepository } from './domain/users/repository';
@@ -37,6 +38,7 @@ import { adminDomainsRouter } from './http/routes/admin/domains';
 import { adminSmtpAccountsRouter } from './http/routes/admin/smtp-accounts';
 import { adminMailboxesRouter } from './http/routes/admin/mailboxes';
 import { adminQuarantineRouter } from './http/routes/admin/quarantine';
+import { adminAccessListsRouter } from './http/routes/admin/access-lists';
 import { adminUsersRouter } from './http/routes/admin/users';
 import { adminWebhooksRouter } from './http/routes/admin/webhooks';
 import { adminFeatureFlagsRouter } from './http/routes/admin/feature-flags';
@@ -60,6 +62,7 @@ export interface ServerDeps {
   aliasService: AliasService;
   sieveService: SieveService;
   quarantineService: QuarantineService;
+  accessListService: AccessListService;
   syncService: SyncService;
   sendJobService: SendJobService;
   userRepo: UserRepository;
@@ -83,6 +86,7 @@ export function createServer(deps: ServerDeps): Express {
     aliasService,
     sieveService,
     quarantineService,
+    accessListService,
     syncService,
     sendJobService,
     userRepo,
@@ -166,6 +170,7 @@ export function createServer(deps: ServerDeps): Express {
   app.use(adminSmtpAccountsRouter(smtpAccountService));
   app.use(adminMailboxesRouter(mailboxService, domainService, sieveService));
   app.use(adminQuarantineRouter(mailboxService, quarantineService));
+  app.use(adminAccessListsRouter(accessListService));
   app.use(adminAliasesRouter(aliasService, domainService));
   app.use(adminSyncRouter(syncService));
   app.use(adminUsersRouter(userService));

@@ -192,6 +192,42 @@ register(
   ({ id }) => client.delete(`/admin/api/aliases/${seg(id)}`),
 );
 
+// ---- allow / deny lists ----
+register(
+  'list_access_rules',
+  {
+    title: 'List allow/deny rules',
+    description: 'List sender/domain/IP allow- and block-list rules (GET /admin/api/access-rules).',
+    readOnly: true,
+  },
+  {},
+  () => client.get('/admin/api/access-rules'),
+);
+
+register(
+  'create_access_rule',
+  {
+    title: 'Create allow/deny rule',
+    description:
+      'Add an allow/block rule for a sender email, domain, or client IP. Set recipient to scope it to one mailbox; omit for a global rule. Reflected into Postfix + Rspamd.',
+  },
+  {
+    matchType: z.enum(['email', 'domain', 'ip']),
+    action: z.enum(['allow', 'block']),
+    value: z.string().describe('Email, domain, or IP/CIDR to match'),
+    recipient: z.string().optional().describe('Scope to this mailbox; omit for global'),
+    note: z.string().optional(),
+  },
+  (body) => client.post('/admin/api/access-rules', body),
+);
+
+register(
+  'delete_access_rule',
+  { title: 'Delete allow/deny rule', description: 'Remove an access rule.', destructive: true },
+  { id: z.string() },
+  ({ id }) => client.delete(`/admin/api/access-rules/${seg(id)}`),
+);
+
 // ---- smtp accounts ----
 register(
   'list_smtp_accounts',
