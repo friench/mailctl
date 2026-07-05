@@ -26,6 +26,11 @@ import { DockerodeEngineClient } from './domain/engine/engine-client';
 import { EngineService } from './domain/engine/service';
 import { DockerodeOpsClient } from './domain/ops/ops-client';
 import { OpsService } from './domain/ops/service';
+import { MigrationJobRepository } from './domain/migrations/repository';
+import { MigrationService } from './domain/migrations/service';
+import { DoveadmMigrator } from './domain/migrations/migrator';
+import { MigrationWorker } from './workers/migration-worker';
+import { makeSecretBox } from './lib/secret-box';
 import { AliasService } from './domain/aliases/service';
 import { SyncService } from './domain/sync/service';
 import { SendJobRepository } from './domain/queue/repository';
@@ -147,6 +152,19 @@ const opsService = new OpsService(
     logger,
   }),
 );
+
+const migrationService = new MigrationService(
+  new MigrationJobRepository(dbClient.db),
+  new DoveadmMigrator({
+    socketPath: env.DOCKER_SOCKET_PATH,
+    dmsContainerName: env.DMS_CONTAINER_NAME,
+    logger,
+  }),
+  mailboxRepo,
+  makeSecretBox(env.SESSION_SECRET),
+  logger,
+);
+migrationService.recoverStuckJobs();
 const syncService = new SyncService(dmsClient, domainRepo, mailboxRepo, aliasRepo, logger);
 
 const nginxReloader = env.NGINX_RELOAD_ENABLED
@@ -222,6 +240,9 @@ retentionWorker.start();
 const tempAliasWorker = new TempAliasWorker(aliasService, logger);
 tempAliasWorker.start();
 
+const migrationWorker = new MigrationWorker(migrationService, logger);
+migrationWorker.start();
+
 const quarantineRetentionWorker = new QuarantineRetentionWorker(
   quarantineService,
   mailboxRepo,
@@ -263,6 +284,7 @@ const app = createServer({
   accessListService,
   engineService,
   opsService,
+  migrationService,
   syncService,
   sendJobService,
   userRepo,
@@ -287,6 +309,7 @@ async function shutdown(signal: string) {
     retentionWorker.stop(),
     tempAliasWorker.stop(),
     quarantineRetentionWorker.stop(),
+    migrationWorker.stop(),
   ]);
   server.close(() => {
     logger.info('HTTP server closed');

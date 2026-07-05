@@ -441,6 +441,47 @@ register(
   () => client.get('/admin/api/ops/sessions'),
 );
 
+// ---- IMAP migration ----
+register(
+  'list_migrations',
+  {
+    title: 'List migrations',
+    description: 'List IMAP migration jobs (GET /admin/api/migrations).',
+    readOnly: true,
+  },
+  {},
+  () => client.get('/admin/api/migrations'),
+);
+
+register(
+  'get_migration',
+  {
+    title: 'Get migration',
+    description: 'Get a migration job with its sync log (GET /admin/api/migrations/:id).',
+    readOnly: true,
+  },
+  { id: z.string() },
+  ({ id }) => client.get(`/admin/api/migrations/${seg(id)}`),
+);
+
+register(
+  'create_migration',
+  {
+    title: 'Create migration',
+    description:
+      'Queue a one-shot IMAP import of an external mailbox into a local address via Dovecot dsync.',
+  },
+  {
+    sourceHost: z.string(),
+    sourcePort: z.number().int().min(1).max(65535).optional(),
+    sourceUser: z.string(),
+    sourcePassword: z.string(),
+    sourceSsl: z.enum(['imaps', 'starttls', 'none']).optional(),
+    destAddress: z.string().describe('An existing local mailbox address'),
+  },
+  (body) => client.post('/admin/api/migrations', body),
+);
+
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);

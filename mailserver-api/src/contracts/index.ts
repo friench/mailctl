@@ -381,6 +381,30 @@ export interface SessionDTO {
   ips: string[];
 }
 
+// ── IMAP migration ───────────────────────────────────────────────────────────
+
+export type MigrationStatusDTO = 'pending' | 'processing' | 'done' | 'failed';
+export type ImapSslModeDTO = 'imaps' | 'starttls' | 'none';
+
+export interface MigrationJobDTO {
+  id: string;
+  sourceHost: string;
+  sourcePort: number;
+  sourceUser: string;
+  sourceSsl: ImapSslModeDTO;
+  destAddress: string;
+  status: MigrationStatusDTO;
+  error: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+/** Job detail additionally carries the per-job sync log. */
+export interface MigrationJobDetailDTO extends MigrationJobDTO {
+  log: string | null;
+}
+
 // ── self-service ─────────────────────────────────────────────────────────────
 
 export interface SelfServiceDTO {
