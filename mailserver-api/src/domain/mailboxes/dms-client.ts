@@ -1,3 +1,5 @@
+import type { AccessConfigFiles } from '../../lib/access-rules';
+
 /** Minimal interface to docker-mailserver's `setup` CLI. Mockable for tests. */
 export interface DmsClient {
   listEmails(): Promise<DmsEmail[]>;
@@ -23,6 +25,8 @@ export interface DmsClient {
   deleteJunk(address: string, uid: number): Promise<void>;
   /** Expunge Junk messages saved more than `days` ago; returns the count removed. */
   purgeJunkOlderThan(address: string, days: number): Promise<number>;
+  /** Install the rendered allow/deny-list config into DMS and reload Postfix + Rspamd. */
+  writeAccessConfig(files: AccessConfigFiles): Promise<void>;
   generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void>;
   readDkimPublicKey(domain: string, selector: string): Promise<string>;
   // Read-only enumeration used by the DMS↔DB reconciliation feature.

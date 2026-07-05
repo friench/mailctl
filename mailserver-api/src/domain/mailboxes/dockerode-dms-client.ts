@@ -5,6 +5,7 @@ import { parseDkimFile } from '../../lib/dkim-parser';
 import { parsePostfixVirtual } from '../../lib/postfix-virtual-parser';
 import { parseDovecotQuotas } from '../../lib/dovecot-quotas-parser';
 import { countSearchResults, parseJunkFetch } from '../../lib/doveadm-parser';
+import { ACCESS_PATHS, type AccessConfigFiles } from '../../lib/access-rules';
 import type { DmsAlias, DmsClient, DmsDkim, DmsEmail, DmsQuota, JunkMessage } from './dms-client';
 
 export interface DockerodeDmsClientOptions {
@@ -192,6 +193,38 @@ export class DockerodeDmsClient implements DmsClient {
     if (count === 0) return 0;
     await this.runRaw(['doveadm', 'expunge', '-u', address, ...query]);
     return count;
+  }
+
+  async writeAccessConfig(files: AccessConfigFiles): Promise<void> {
+    // Ensure the Rspamd config subdirs exist (present only when Rspamd is enabled;
+    // creating them is harmless otherwise).
+    await this.runRaw(['mkdir', '-p', `${ACCESS_PATHS.rspamdDir}/override.d`]);
+    await this.runRaw(['mkdir', '-p', `${ACCESS_PATHS.rspamdDir}/local.d`]);
+
+    const writes: Array<[string, string]> = [
+      [ACCESS_PATHS.postfixSender, files.postfixSender],
+      [ACCESS_PATHS.postfixClient, files.postfixClient],
+      [ACCESS_PATHS.postfixMainCf, files.postfixMainCf],
+      [ACCESS_PATHS.rspamdFromBlock, files.rspamdFromBlock],
+      [ACCESS_PATHS.rspamdFromAllow, files.rspamdFromAllow],
+      [ACCESS_PATHS.rspamdIpBlock, files.rspamdIpBlock],
+      [ACCESS_PATHS.rspamdIpAllow, files.rspamdIpAllow],
+      [ACCESS_PATHS.rspamdConf, files.rspamdConf],
+      [ACCESS_PATHS.rspamdRcptLua, files.rspamdRcptLua],
+    ];
+    for (const [path, content] of writes) {
+      await this.runRawWithInput(['tee', path], content);
+    }
+
+    // Apply: reload Postfix (picks up main.cf + texthash maps) and Rspamd
+    // (re-reads multimap.conf / Lua). Both are best-effort — a stack without
+    // Rspamd simply has no service to reload.
+    await this.runRaw(['postfix', 'reload']).catch((err) =>
+      this.logger?.warn({ err }, 'writeAccessConfig: postfix reload failed'),
+    );
+    await this.runRaw(['supervisorctl', 'restart', 'rspamd']).catch((err) =>
+      this.logger?.debug({ err }, 'writeAccessConfig: rspamd restart skipped'),
+    );
   }
 
   async generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void> {

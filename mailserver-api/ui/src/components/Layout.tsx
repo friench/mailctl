@@ -11,6 +11,7 @@ const NAV = [
   { to: '/admin/mailboxes', label: 'Mailboxes' },
   { to: '/admin/aliases', label: 'Aliases' },
   { to: '/admin/quarantine', label: 'Quarantine' },
+  { to: '/admin/access-lists', label: 'Allow / deny' },
   { to: '/admin/sync', label: 'Sync' },
   { to: '/admin/smtp-accounts', label: 'SMTP accounts' },
   { to: '/admin/api-keys', label: 'API keys' },

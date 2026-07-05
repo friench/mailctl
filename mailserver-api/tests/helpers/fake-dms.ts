@@ -6,6 +6,7 @@ import type {
   DmsQuota,
   JunkMessage,
 } from '../../src/domain/mailboxes/dms-client';
+import type { AccessConfigFiles } from '../../src/lib/access-rules';
 
 interface DkimEntry {
   selector: string;
@@ -24,6 +25,8 @@ export class FakeDmsClient implements DmsClient {
   public sieve = new Map<string, string>();
   /** Per-address spam/Junk folder contents. Seed directly in tests. */
   public junk = new Map<string, JunkMessage[]>();
+  /** Last allow/deny-list config written via {@link writeAccessConfig}. */
+  public accessConfig: AccessConfigFiles | null = null;
   public calls: Array<{ method: string; args: unknown[] }> = [];
   public errors: Partial<Record<keyof DmsClient, Error>> = {};
 
@@ -127,6 +130,12 @@ export class FakeDmsClient implements DmsClient {
     const kept = current.filter((m) => new Date(m.date).getTime() >= cutoff);
     this.junk.set(address, kept);
     return current.length - kept.length;
+  }
+
+  async writeAccessConfig(files: AccessConfigFiles): Promise<void> {
+    this.calls.push({ method: 'writeAccessConfig', args: [files] });
+    if (this.errors.writeAccessConfig) throw this.errors.writeAccessConfig;
+    this.accessConfig = files;
   }
 
   async generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void> {
