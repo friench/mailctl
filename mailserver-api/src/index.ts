@@ -24,6 +24,8 @@ import { AccessRuleRepository } from './domain/access-lists/repository';
 import { AccessListService } from './domain/access-lists/service';
 import { DockerodeEngineClient } from './domain/engine/engine-client';
 import { EngineService } from './domain/engine/service';
+import { DockerodeOpsClient } from './domain/ops/ops-client';
+import { OpsService } from './domain/ops/service';
 import { AliasService } from './domain/aliases/service';
 import { SyncService } from './domain/sync/service';
 import { SendJobRepository } from './domain/queue/repository';
@@ -135,6 +137,15 @@ const engineService = new EngineService(
     logger,
   }),
   { containers: engineContainers, rspamdUiUrl: env.RSPAMD_UI_URL ?? null },
+);
+
+const opsService = new OpsService(
+  new DockerodeOpsClient({
+    socketPath: env.DOCKER_SOCKET_PATH,
+    dmsContainerName: env.DMS_CONTAINER_NAME,
+    mailLogPath: env.MAIL_LOG_PATH,
+    logger,
+  }),
 );
 const syncService = new SyncService(dmsClient, domainRepo, mailboxRepo, aliasRepo, logger);
 
@@ -251,6 +262,7 @@ const app = createServer({
   quarantineService,
   accessListService,
   engineService,
+  opsService,
   syncService,
   sendJobService,
   userRepo,

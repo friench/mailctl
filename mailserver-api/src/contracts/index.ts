@@ -352,6 +352,35 @@ export interface EngineOverviewDTO {
   containers: ContainerStatusDTO[];
 }
 
+// ── operational views (logs, queue, sessions) ───────────────────────────────
+
+export interface LogLinesDTO {
+  lines: string[];
+  query: string | null;
+}
+
+export interface QueueEntryDTO {
+  queueId: string;
+  sizeBytes: number;
+  arrivalTime: string;
+  sender: string;
+  status: 'active' | 'hold' | 'deferred';
+  reason: string | null;
+  recipients: string[];
+}
+
+export interface MailQueueDTO {
+  entries: QueueEntryDTO[];
+  summary: string | null;
+}
+
+export interface SessionDTO {
+  user: string;
+  connections: number;
+  proto: string;
+  ips: string[];
+}
+
 // ── self-service ─────────────────────────────────────────────────────────────
 
 export interface SelfServiceDTO {

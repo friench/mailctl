@@ -71,6 +71,8 @@ const envSchema = z.object({
   RSPAMD_UI_URL: z.string().optional(),
   /** Comma-separated container names the engine page may inspect/restart. */
   ENGINE_CONTAINERS: z.string().optional(),
+  /** Path (inside the DMS container) of the mail log tailed by the ops views. */
+  MAIL_LOG_PATH: z.string().default('/var/log/mail/mail.log'),
   /** When `quarantine_retention_enabled`, expunge Junk messages older than this many days. */
   QUARANTINE_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
 
