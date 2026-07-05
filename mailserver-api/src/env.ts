@@ -65,6 +65,11 @@ const envSchema = z.object({
   /** Delete finished send jobs / webhook deliveries older than this many days. 0 disables. */
   RETENTION_DAYS: z.coerce.number().int().min(0).default(30),
 
+  /** IMAP folder the spam engine files junk into (docker-mailserver default: Junk). */
+  SPAM_MAILBOX: z.string().default('Junk'),
+  /** When `quarantine_retention_enabled`, expunge Junk messages older than this many days. */
+  QUARANTINE_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
+
   /** Optional offsite upload to any S3-compatible store (AWS S3, MinIO, R2, …). */
   BACKUP_S3_ENDPOINT: z.string().optional(),
   BACKUP_S3_REGION: z.string().default('us-east-1'),

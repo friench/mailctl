@@ -14,6 +14,7 @@ import { AliasRepository } from '../../src/domain/aliases/repository';
 import { AliasService } from '../../src/domain/aliases/service';
 import { SieveRepository } from '../../src/domain/sieve/repository';
 import { SieveService } from '../../src/domain/sieve/service';
+import { QuarantineService } from '../../src/domain/quarantine/service';
 import { SyncService } from '../../src/domain/sync/service';
 import { SendJobRepository } from '../../src/domain/queue/repository';
 import { UserRepository } from '../../src/domain/users/repository';
@@ -76,6 +77,7 @@ export interface TestDbHandle {
   aliasRepo: AliasRepository;
   aliasService: AliasService;
   sieveService: SieveService;
+  quarantineService: QuarantineService;
   syncService: SyncService;
   sendJobRepo: SendJobRepository;
   userRepo: UserRepository;
@@ -138,6 +140,7 @@ export function createTestDb(
   const aliasRepo = new AliasRepository(client.db);
   const aliasService = new AliasService(aliasRepo, domainRepo, dms);
   const sieveService = new SieveService(new SieveRepository(client.db), mailboxRepo, dms);
+  const quarantineService = new QuarantineService(mailboxRepo, dms, silentLogger);
   const syncService = new SyncService(dms, domainRepo, mailboxRepo, aliasRepo, silentLogger);
 
   const dnsResolver = new StubDnsResolver();
@@ -158,6 +161,7 @@ export function createTestDb(
     aliasRepo,
     aliasService,
     sieveService,
+    quarantineService,
     syncService,
     sendJobRepo,
     userRepo,

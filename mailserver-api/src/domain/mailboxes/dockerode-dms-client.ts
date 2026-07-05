@@ -4,13 +4,20 @@ import type { Logger } from '../../logger';
 import { parseDkimFile } from '../../lib/dkim-parser';
 import { parsePostfixVirtual } from '../../lib/postfix-virtual-parser';
 import { parseDovecotQuotas } from '../../lib/dovecot-quotas-parser';
-import type { DmsAlias, DmsClient, DmsDkim, DmsEmail, DmsQuota } from './dms-client';
+import { countSearchResults, parseJunkFetch } from '../../lib/doveadm-parser';
+import type { DmsAlias, DmsClient, DmsDkim, DmsEmail, DmsQuota, JunkMessage } from './dms-client';
 
 export interface DockerodeDmsClientOptions {
   socketPath?: string;
   containerName: string;
   logger?: Logger;
+  /** IMAP folder spam is filed into by the engine (docker-mailserver default: `Junk`). */
+  spamMailbox?: string;
 }
+
+/** doveadm `fetch` field list backing {@link DockerodeDmsClient.listJunk}. */
+const JUNK_FETCH_FIELDS =
+  'uid guid size.physical date.received hdr.from hdr.subject hdr.x-spam-score';
 
 const EMAIL_LIST_LINE_RE = /^\*\s+(\S+@\S+)/;
 const DMS_CONFIG_DIR = '/tmp/docker-mailserver';
@@ -52,11 +59,13 @@ export class DockerodeDmsClient implements DmsClient {
   private readonly docker: Docker;
   private readonly containerName: string;
   private readonly logger: Logger | undefined;
+  private readonly spamMailbox: string;
 
   constructor(opts: DockerodeDmsClientOptions) {
     this.docker = new Docker({ socketPath: opts.socketPath ?? '/var/run/docker.sock' });
     this.containerName = opts.containerName;
     this.logger = opts.logger;
+    this.spamMailbox = opts.spamMailbox ?? 'Junk';
   }
 
   async listEmails(): Promise<DmsEmail[]> {
@@ -104,6 +113,85 @@ export class DockerodeDmsClient implements DmsClient {
     await this.runRaw(['mkdir', '-p', home]);
     await this.runRawWithInput(['tee', file], script);
     await this.runRaw(['chown', '5000:5000', file]).catch(() => undefined);
+  }
+
+  async listJunk(address: string): Promise<JunkMessage[]> {
+    // `doveadm fetch` errors when the Junk folder does not exist yet (a mailbox
+    // that has never received spam) — treat that as an empty quarantine.
+    let stdout: string;
+    try {
+      ({ stdout } = await this.runRaw([
+        'doveadm',
+        'fetch',
+        '-u',
+        address,
+        JUNK_FETCH_FIELDS,
+        'mailbox',
+        this.spamMailbox,
+      ]));
+    } catch (err) {
+      this.logger?.debug({ address, err }, 'listJunk: no Junk folder / fetch failed');
+      return [];
+    }
+    return parseJunkFetch(stdout);
+  }
+
+  async readJunkMessage(address: string, uid: number): Promise<string> {
+    const { stdout } = await this.runRaw([
+      'doveadm',
+      'fetch',
+      '-u',
+      address,
+      'text',
+      'mailbox',
+      this.spamMailbox,
+      'uid',
+      String(uid),
+    ]);
+    // The single `text` field is printed as `text: <full message>`; drop the key.
+    return stdout.replace(/^text: ?/, '');
+  }
+
+  async releaseJunk(address: string, uid: number): Promise<void> {
+    await this.runRaw([
+      'doveadm',
+      'move',
+      '-u',
+      address,
+      'INBOX',
+      'mailbox',
+      this.spamMailbox,
+      'uid',
+      String(uid),
+    ]);
+  }
+
+  async deleteJunk(address: string, uid: number): Promise<void> {
+    await this.runRaw([
+      'doveadm',
+      'expunge',
+      '-u',
+      address,
+      'mailbox',
+      this.spamMailbox,
+      'uid',
+      String(uid),
+    ]);
+  }
+
+  async purgeJunkOlderThan(address: string, days: number): Promise<number> {
+    const query = ['mailbox', this.spamMailbox, 'savedbefore', `${days}d`];
+    let count = 0;
+    try {
+      const { stdout } = await this.runRaw(['doveadm', 'search', '-u', address, ...query]);
+      count = countSearchResults(stdout);
+    } catch (err) {
+      this.logger?.debug({ address, err }, 'purgeJunkOlderThan: search failed');
+      return 0;
+    }
+    if (count === 0) return 0;
+    await this.runRaw(['doveadm', 'expunge', '-u', address, ...query]);
+    return count;
   }
 
   async generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void> {

@@ -279,6 +279,26 @@ export interface SieveConfigDTO {
   rules: SieveRuleDTO[];
 }
 
+// ── spam quarantine (Junk folder) ────────────────────────────────────────────
+
+export interface QuarantineMessageDTO {
+  /** Dovecot UID within the Junk folder — the handle for release/delete. */
+  uid: number;
+  from: string;
+  subject: string;
+  /** Received date as reported by Dovecot (e.g. `2026-07-01 12:34:56`). */
+  date: string;
+  sizeBytes: number | null;
+  /** Spam score, when the engine stamped an `X-Spam-Score` header. */
+  score: number | null;
+}
+
+export interface QuarantineBoxDTO {
+  mailboxId: string;
+  address: string;
+  messages: QuarantineMessageDTO[];
+}
+
 // ── self-service ─────────────────────────────────────────────────────────────
 
 export interface SelfServiceDTO {

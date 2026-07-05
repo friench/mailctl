@@ -4,6 +4,7 @@ import type {
   DmsDkim,
   DmsEmail,
   DmsQuota,
+  JunkMessage,
 } from '../../src/domain/mailboxes/dms-client';
 
 interface DkimEntry {
@@ -21,6 +22,8 @@ export class FakeDmsClient implements DmsClient {
   public sendRestricted = new Set<string>();
   public receiveRestricted = new Set<string>();
   public sieve = new Map<string, string>();
+  /** Per-address spam/Junk folder contents. Seed directly in tests. */
+  public junk = new Map<string, JunkMessage[]>();
   public calls: Array<{ method: string; args: unknown[] }> = [];
   public errors: Partial<Record<keyof DmsClient, Error>> = {};
 
@@ -82,6 +85,48 @@ export class FakeDmsClient implements DmsClient {
     if (this.errors.writeSieve) throw this.errors.writeSieve;
     if (script) this.sieve.set(address, script);
     else this.sieve.delete(address);
+  }
+
+  async listJunk(address: string): Promise<JunkMessage[]> {
+    this.calls.push({ method: 'listJunk', args: [address] });
+    if (this.errors.listJunk) throw this.errors.listJunk;
+    return [...(this.junk.get(address) ?? [])];
+  }
+
+  async readJunkMessage(address: string, uid: number): Promise<string> {
+    this.calls.push({ method: 'readJunkMessage', args: [address, uid] });
+    if (this.errors.readJunkMessage) throw this.errors.readJunkMessage;
+    const msg = (this.junk.get(address) ?? []).find((m) => m.uid === uid);
+    if (!msg) throw new Error(`not found: uid ${uid}`);
+    return `From: ${msg.from}\nSubject: ${msg.subject}\n\n[body of uid ${uid}]`;
+  }
+
+  async releaseJunk(address: string, uid: number): Promise<void> {
+    this.calls.push({ method: 'releaseJunk', args: [address, uid] });
+    if (this.errors.releaseJunk) throw this.errors.releaseJunk;
+    this.junk.set(
+      address,
+      (this.junk.get(address) ?? []).filter((m) => m.uid !== uid),
+    );
+  }
+
+  async deleteJunk(address: string, uid: number): Promise<void> {
+    this.calls.push({ method: 'deleteJunk', args: [address, uid] });
+    if (this.errors.deleteJunk) throw this.errors.deleteJunk;
+    this.junk.set(
+      address,
+      (this.junk.get(address) ?? []).filter((m) => m.uid !== uid),
+    );
+  }
+
+  async purgeJunkOlderThan(address: string, days: number): Promise<number> {
+    this.calls.push({ method: 'purgeJunkOlderThan', args: [address, days] });
+    if (this.errors.purgeJunkOlderThan) throw this.errors.purgeJunkOlderThan;
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const current = this.junk.get(address) ?? [];
+    const kept = current.filter((m) => new Date(m.date).getTime() >= cutoff);
+    this.junk.set(address, kept);
+    return current.length - kept.length;
   }
 
   async generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void> {

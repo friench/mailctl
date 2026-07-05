@@ -36,6 +36,8 @@ export const TEST_ENV: Env = {
   BACKUP_INTERVAL_HOURS: 24,
   BACKUP_KEEP: 7,
   RETENTION_DAYS: 30,
+  SPAM_MAILBOX: 'Junk',
+  QUARANTINE_RETENTION_DAYS: 30,
   BACKUP_S3_REGION: 'us-east-1',
   BACKUP_S3_PREFIX: 'mailserver/',
 };
@@ -85,6 +87,7 @@ export function createTestApp(h: TestDbHandle, env: Env = TEST_ENV): TestAppHand
     mailboxService: h.mailboxService,
     aliasService: h.aliasService,
     sieveService: h.sieveService,
+    quarantineService: h.quarantineService,
     syncService: h.syncService,
     sendJobService,
     userRepo: h.userRepo,

@@ -5,7 +5,7 @@ import { FULL_ACCESS, type Authz } from '../../lib/authz';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 // Paths (relative to the /admin/api mount) whose resources are domain-scoped.
-const DOMAIN_SCOPED = ['/domains', '/mailboxes', '/aliases'];
+const DOMAIN_SCOPED = ['/domains', '/mailboxes', '/aliases', '/quarantine'];
 // Non-sensitive UI bootstrap, readable by any authenticated role.
 const ALWAYS_ALLOWED = ['/settings'];
 // Self-service — any authenticated role, any method (each action only touches
