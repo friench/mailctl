@@ -10,6 +10,7 @@ import { NullNginxReloader } from '../../src/domain/nginx/reloader';
 import { BackupService } from '../../src/domain/backups/service';
 import { StatsService } from '../../src/domain/stats/service';
 import { EngineService } from '../../src/domain/engine/service';
+import { OpsService } from '../../src/domain/ops/service';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -39,6 +40,7 @@ export const TEST_ENV: Env = {
   RETENTION_DAYS: 30,
   SPAM_MAILBOX: 'Junk',
   QUARANTINE_RETENTION_DAYS: 30,
+  MAIL_LOG_PATH: '/var/log/mail/mail.log',
   BACKUP_S3_REGION: 'us-east-1',
   BACKUP_S3_PREFIX: 'mailserver/',
 };
@@ -81,6 +83,7 @@ export function createTestApp(h: TestDbHandle, env: Env = TEST_ENV): TestAppHand
     containers: ['mailserver', 'nginx', 'mail-api'],
     rspamdUiUrl: null,
   });
+  const opsService = new OpsService(h.opsClient);
   const app = createServer({
     env,
     logger,
@@ -95,6 +98,7 @@ export function createTestApp(h: TestDbHandle, env: Env = TEST_ENV): TestAppHand
     quarantineService: h.quarantineService,
     accessListService: h.accessListService,
     engineService,
+    opsService,
     syncService: h.syncService,
     sendJobService,
     userRepo: h.userRepo,

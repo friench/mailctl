@@ -398,6 +398,49 @@ register(
   ({ name }) => client.post(`/admin/api/engine/containers/${seg(name)}/restart`),
 );
 
+// ---- operational views ----
+register(
+  'get_mail_logs',
+  {
+    title: 'Mail logs',
+    description: 'Tail/search the mail log (GET /admin/api/ops/logs?lines&q).',
+    readOnly: true,
+  },
+  {
+    lines: z.number().int().min(1).max(2000).optional(),
+    q: z.string().optional().describe('Case-insensitive substring filter'),
+  },
+  ({ lines, q }) => {
+    const params = new URLSearchParams();
+    if (lines) params.set('lines', String(lines));
+    if (q) params.set('q', q);
+    const qs = params.toString();
+    return client.get(`/admin/api/ops/logs${qs ? `?${qs}` : ''}`);
+  },
+);
+
+register(
+  'get_mail_queue',
+  {
+    title: 'Mail queue',
+    description: 'View the Postfix mail queue (GET /admin/api/ops/queue).',
+    readOnly: true,
+  },
+  {},
+  () => client.get('/admin/api/ops/queue'),
+);
+
+register(
+  'get_sessions',
+  {
+    title: 'Active sessions',
+    description: 'List active IMAP/POP3 sessions (GET /admin/api/ops/sessions).',
+    readOnly: true,
+  },
+  {},
+  () => client.get('/admin/api/ops/sessions'),
+);
+
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);

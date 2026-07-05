@@ -17,6 +17,7 @@ import type { SieveService } from './domain/sieve/service';
 import type { QuarantineService } from './domain/quarantine/service';
 import type { AccessListService } from './domain/access-lists/service';
 import type { EngineService } from './domain/engine/service';
+import type { OpsService } from './domain/ops/service';
 import type { SyncService } from './domain/sync/service';
 import type { SendJobService } from './domain/queue/service';
 import type { UserRepository } from './domain/users/repository';
@@ -41,6 +42,7 @@ import { adminMailboxesRouter } from './http/routes/admin/mailboxes';
 import { adminQuarantineRouter } from './http/routes/admin/quarantine';
 import { adminAccessListsRouter } from './http/routes/admin/access-lists';
 import { adminEngineRouter } from './http/routes/admin/engine';
+import { adminOpsRouter } from './http/routes/admin/ops';
 import { adminUsersRouter } from './http/routes/admin/users';
 import { adminWebhooksRouter } from './http/routes/admin/webhooks';
 import { adminFeatureFlagsRouter } from './http/routes/admin/feature-flags';
@@ -66,6 +68,7 @@ export interface ServerDeps {
   quarantineService: QuarantineService;
   accessListService: AccessListService;
   engineService: EngineService;
+  opsService: OpsService;
   syncService: SyncService;
   sendJobService: SendJobService;
   userRepo: UserRepository;
@@ -91,6 +94,7 @@ export function createServer(deps: ServerDeps): Express {
     quarantineService,
     accessListService,
     engineService,
+    opsService,
     syncService,
     sendJobService,
     userRepo,
@@ -176,6 +180,7 @@ export function createServer(deps: ServerDeps): Express {
   app.use(adminQuarantineRouter(mailboxService, quarantineService));
   app.use(adminAccessListsRouter(accessListService));
   app.use(adminEngineRouter(engineService));
+  app.use(adminOpsRouter(opsService));
   app.use(adminAliasesRouter(aliasService, domainService));
   app.use(adminSyncRouter(syncService));
   app.use(adminUsersRouter(userService));
