@@ -28,6 +28,7 @@ import { FeatureFlagRepository } from '../../src/domain/feature-flags/repository
 import { FeatureFlagService } from '../../src/domain/feature-flags/service';
 import { createLogger } from '../../src/logger';
 import { FakeDmsClient } from './fake-dms';
+import { FakeEngineClient } from './fake-engine';
 
 const silentLogger = createLogger({ NODE_ENV: 'test', LOG_LEVEL: 'silent' });
 
@@ -91,6 +92,7 @@ export interface TestDbHandle {
   featureFlagRepo: FeatureFlagRepository;
   featureFlagService: FeatureFlagService;
   dms: FakeDmsClient;
+  engineClient: FakeEngineClient;
   setFetch: (fn: typeof fetch) => void;
   close: () => void;
 }
@@ -110,6 +112,7 @@ export function createTestDb(
   const smtpAccountLoader = new SmtpAccountLoader(smtpAccountRepo, env);
   const mailboxRepo = new MailboxRepository(client.db);
   const dms = new FakeDmsClient();
+  const engineClient = new FakeEngineClient();
   const sendJobRepo = new SendJobRepository(client.db);
   const userRepo = new UserRepository(client.db);
   const userService = new UserService(userRepo);
@@ -181,6 +184,7 @@ export function createTestDb(
     featureFlagRepo,
     featureFlagService,
     dms,
+    engineClient,
     setFetch: (fn) => {
       activeFetch = fn;
     },

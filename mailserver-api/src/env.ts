@@ -67,6 +67,10 @@ const envSchema = z.object({
 
   /** IMAP folder the spam engine files junk into (docker-mailserver default: Junk). */
   SPAM_MAILBOX: z.string().default('Junk'),
+  /** Optional link to the Rspamd web UI (e.g. https://mail.example.com/rspamd/). */
+  RSPAMD_UI_URL: z.string().optional(),
+  /** Comma-separated container names the engine page may inspect/restart. */
+  ENGINE_CONTAINERS: z.string().optional(),
   /** When `quarantine_retention_enabled`, expunge Junk messages older than this many days. */
   QUARANTINE_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
 
