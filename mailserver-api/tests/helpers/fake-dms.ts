@@ -27,6 +27,8 @@ export class FakeDmsClient implements DmsClient {
   public junk = new Map<string, JunkMessage[]>();
   /** Last allow/deny-list config written via {@link writeAccessConfig}. */
   public accessConfig: AccessConfigFiles | null = null;
+  /** Last fetchmail.cf written via {@link writeFetchmailConfig}. */
+  public fetchmailConfig: string | null = null;
   public calls: Array<{ method: string; args: unknown[] }> = [];
   public errors: Partial<Record<keyof DmsClient, Error>> = {};
 
@@ -136,6 +138,12 @@ export class FakeDmsClient implements DmsClient {
     this.calls.push({ method: 'writeAccessConfig', args: [files] });
     if (this.errors.writeAccessConfig) throw this.errors.writeAccessConfig;
     this.accessConfig = files;
+  }
+
+  async writeFetchmailConfig(content: string): Promise<void> {
+    this.calls.push({ method: 'writeFetchmailConfig', args: [content] });
+    if (this.errors.writeFetchmailConfig) throw this.errors.writeFetchmailConfig;
+    this.fetchmailConfig = content;
   }
 
   async generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void> {

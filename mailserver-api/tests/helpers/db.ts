@@ -19,6 +19,8 @@ import { AccessRuleRepository } from '../../src/domain/access-lists/repository';
 import { AccessListService } from '../../src/domain/access-lists/service';
 import { MigrationJobRepository } from '../../src/domain/migrations/repository';
 import { MigrationService } from '../../src/domain/migrations/service';
+import { FetchmailRepository } from '../../src/domain/fetchmail/repository';
+import { FetchmailService } from '../../src/domain/fetchmail/service';
 import { makeSecretBox } from '../../src/lib/secret-box';
 import { SyncService } from '../../src/domain/sync/service';
 import { SendJobRepository } from '../../src/domain/queue/repository';
@@ -89,6 +91,7 @@ export interface TestDbHandle {
   accessListService: AccessListService;
   migrationService: MigrationService;
   migrator: FakeMigrator;
+  fetchmailService: FetchmailService;
   syncService: SyncService;
   sendJobRepo: SendJobRepository;
   userRepo: UserRepository;
@@ -161,12 +164,20 @@ export function createTestDb(
     dms,
     silentLogger,
   );
+  const secretBox = makeSecretBox('a'.repeat(64));
   const migrator = new FakeMigrator();
   const migrationService = new MigrationService(
     new MigrationJobRepository(client.db),
     migrator,
     mailboxRepo,
-    makeSecretBox('a'.repeat(64)),
+    secretBox,
+    silentLogger,
+  );
+  const fetchmailService = new FetchmailService(
+    new FetchmailRepository(client.db),
+    mailboxRepo,
+    dms,
+    secretBox,
     silentLogger,
   );
   const syncService = new SyncService(dms, domainRepo, mailboxRepo, aliasRepo, silentLogger);
@@ -193,6 +204,7 @@ export function createTestDb(
     accessListService,
     migrationService,
     migrator,
+    fetchmailService,
     syncService,
     sendJobRepo,
     userRepo,

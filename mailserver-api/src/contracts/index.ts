@@ -381,6 +381,23 @@ export interface SessionDTO {
   ips: string[];
 }
 
+// ── inbound fetching (fetchmail) ─────────────────────────────────────────────
+
+export type FetchmailProtocolDTO = 'imap' | 'pop3';
+
+export interface FetchmailAccountDTO {
+  id: string;
+  pollServer: string;
+  protocol: FetchmailProtocolDTO;
+  port: number | null;
+  username: string;
+  destAddress: string;
+  ssl: boolean;
+  keep: boolean;
+  active: boolean;
+  createdAt: string;
+}
+
 // ── IMAP migration ───────────────────────────────────────────────────────────
 
 export type MigrationStatusDTO = 'pending' | 'processing' | 'done' | 'failed';

@@ -30,6 +30,8 @@ import { MigrationJobRepository } from './domain/migrations/repository';
 import { MigrationService } from './domain/migrations/service';
 import { DoveadmMigrator } from './domain/migrations/migrator';
 import { MigrationWorker } from './workers/migration-worker';
+import { FetchmailRepository } from './domain/fetchmail/repository';
+import { FetchmailService } from './domain/fetchmail/service';
 import { makeSecretBox } from './lib/secret-box';
 import { AliasService } from './domain/aliases/service';
 import { SyncService } from './domain/sync/service';
@@ -153,6 +155,8 @@ const opsService = new OpsService(
   }),
 );
 
+const secretBox = makeSecretBox(env.SESSION_SECRET);
+
 const migrationService = new MigrationService(
   new MigrationJobRepository(dbClient.db),
   new DoveadmMigrator({
@@ -161,10 +165,18 @@ const migrationService = new MigrationService(
     logger,
   }),
   mailboxRepo,
-  makeSecretBox(env.SESSION_SECRET),
+  secretBox,
   logger,
 );
 migrationService.recoverStuckJobs();
+
+const fetchmailService = new FetchmailService(
+  new FetchmailRepository(dbClient.db),
+  mailboxRepo,
+  dmsClient,
+  secretBox,
+  logger,
+);
 const syncService = new SyncService(dmsClient, domainRepo, mailboxRepo, aliasRepo, logger);
 
 const nginxReloader = env.NGINX_RELOAD_ENABLED
@@ -285,6 +297,7 @@ const app = createServer({
   engineService,
   opsService,
   migrationService,
+  fetchmailService,
   syncService,
   sendJobService,
   userRepo,

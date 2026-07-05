@@ -24,6 +24,7 @@ import { AccessListsPage } from './pages/AccessLists';
 import { EnginePage } from './pages/Engine';
 import { OpsPage } from './pages/Ops';
 import { MigrationsPage } from './pages/Migrations';
+import { FetchmailPage } from './pages/Fetchmail';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -79,6 +80,7 @@ export default function App() {
             <Route path="engine" element={<EnginePage />} />
             <Route path="ops" element={<OpsPage />} />
             <Route path="migrations" element={<MigrationsPage />} />
+            <Route path="fetchmail" element={<FetchmailPage />} />
             <Route path="sync" element={<SyncPage />} />
             <Route path="smtp-accounts" element={<SmtpAccountsPage />} />
             <Route path="api-keys" element={<ApiKeysPage />} />

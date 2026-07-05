@@ -100,6 +100,7 @@ export function createTestApp(h: TestDbHandle, env: Env = TEST_ENV): TestAppHand
     engineService,
     opsService,
     migrationService: h.migrationService,
+    fetchmailService: h.fetchmailService,
     syncService: h.syncService,
     sendJobService,
     userRepo: h.userRepo,

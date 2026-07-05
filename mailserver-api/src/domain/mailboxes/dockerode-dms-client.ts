@@ -227,6 +227,15 @@ export class DockerodeDmsClient implements DmsClient {
     );
   }
 
+  async writeFetchmailConfig(content: string): Promise<void> {
+    await this.runRawWithInput(['tee', '/tmp/docker-mailserver/fetchmail.cf'], content);
+    // fetchmail re-reads its rc on the next poll; restart to apply promptly.
+    // Best-effort — absent when ENABLE_FETCHMAIL=0.
+    await this.runRaw(['supervisorctl', 'restart', 'fetchmail']).catch((err) =>
+      this.logger?.debug({ err }, 'writeFetchmailConfig: fetchmail restart skipped'),
+    );
+  }
+
   async generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void> {
     await this.runSetup([
       'config',

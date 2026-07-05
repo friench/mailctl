@@ -482,6 +482,49 @@ register(
   (body) => client.post('/admin/api/migrations', body),
 );
 
+// ---- inbound fetching (fetchmail) ----
+register(
+  'list_fetchmail',
+  {
+    title: 'List fetchmail accounts',
+    description: 'List inbound-fetch (fetchmail) accounts (GET /admin/api/fetchmail).',
+    readOnly: true,
+  },
+  {},
+  () => client.get('/admin/api/fetchmail'),
+);
+
+register(
+  'create_fetchmail',
+  {
+    title: 'Create fetchmail account',
+    description:
+      'Add a recurring inbound-fetch account pulling a remote IMAP/POP3 mailbox into a local address. Requires ENABLE_FETCHMAIL=1 on the mailserver.',
+  },
+  {
+    pollServer: z.string(),
+    protocol: z.enum(['imap', 'pop3']),
+    port: z.number().int().min(1).max(65535).optional(),
+    username: z.string(),
+    password: z.string(),
+    destAddress: z.string().describe('An existing local mailbox address'),
+    ssl: z.boolean().optional(),
+    keep: z.boolean().optional(),
+  },
+  (body) => client.post('/admin/api/fetchmail', body),
+);
+
+register(
+  'delete_fetchmail',
+  {
+    title: 'Delete fetchmail account',
+    description: 'Remove an inbound-fetch account.',
+    destructive: true,
+  },
+  { id: z.string() },
+  ({ id }) => client.delete(`/admin/api/fetchmail/${seg(id)}`),
+);
+
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
