@@ -27,6 +27,8 @@ export interface DmsClient {
   purgeJunkOlderThan(address: string, days: number): Promise<number>;
   /** Install the rendered allow/deny-list config into DMS and reload Postfix + Rspamd. */
   writeAccessConfig(files: AccessConfigFiles): Promise<void>;
+  /** Install the rendered `fetchmail.cf` into DMS and restart the fetchmail daemon. */
+  writeFetchmailConfig(content: string): Promise<void>;
   generateDkim(domain: string, selector: string, keysize: 2048 | 4096): Promise<void>;
   readDkimPublicKey(domain: string, selector: string): Promise<string>;
   // Read-only enumeration used by the DMS↔DB reconciliation feature.

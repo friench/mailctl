@@ -177,6 +177,30 @@ export const accessRules = sqliteTable(
 export type AccessRuleRow = typeof accessRules.$inferSelect;
 export type AccessRuleInsert = typeof accessRules.$inferInsert;
 
+export const FETCHMAIL_PROTOCOLS = ['imap', 'pop3'] as const;
+export type FetchmailProtocol = (typeof FETCHMAIL_PROTOCOLS)[number];
+
+/**
+ * A recurring inbound-fetch account (fetchmail): pull mail from a remote
+ * IMAP/POP3 server into a local address. `passwordEnc` is encrypted at rest
+ * (SecretBox) and decrypted only when rendering `fetchmail.cf`.
+ */
+export const fetchmailAccounts = sqliteTable('fetchmail_accounts', {
+  id: text('id').primaryKey(),
+  pollServer: text('poll_server').notNull(),
+  protocol: text('protocol', { enum: FETCHMAIL_PROTOCOLS }).notNull(),
+  port: integer('port'),
+  username: text('username').notNull(),
+  passwordEnc: text('password_enc').notNull(),
+  destAddress: text('dest_address').notNull(),
+  ssl: integer('ssl', { mode: 'boolean' }).notNull().default(true),
+  keep: integer('keep', { mode: 'boolean' }).notNull().default(true),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+export type FetchmailAccountRow = typeof fetchmailAccounts.$inferSelect;
+
 export const MIGRATION_STATUSES = ['pending', 'processing', 'done', 'failed'] as const;
 export type MigrationStatus = (typeof MIGRATION_STATUSES)[number];
 export const IMAP_SSL_MODES = ['imaps', 'starttls', 'none'] as const;
