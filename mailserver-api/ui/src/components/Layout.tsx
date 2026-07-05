@@ -10,6 +10,7 @@ const NAV = [
   { to: '/admin/domains', label: 'Domains' },
   { to: '/admin/mailboxes', label: 'Mailboxes' },
   { to: '/admin/aliases', label: 'Aliases' },
+  { to: '/admin/import', label: 'Bulk import' },
   { to: '/admin/quarantine', label: 'Quarantine' },
   { to: '/admin/access-lists', label: 'Allow / deny' },
   { to: '/admin/engine', label: 'Engine' },

@@ -20,6 +20,7 @@ import type { EngineService } from './domain/engine/service';
 import type { OpsService } from './domain/ops/service';
 import type { MigrationService } from './domain/migrations/service';
 import type { FetchmailService } from './domain/fetchmail/service';
+import type { ImportService } from './domain/import/service';
 import type { SyncService } from './domain/sync/service';
 import type { SendJobService } from './domain/queue/service';
 import type { UserRepository } from './domain/users/repository';
@@ -47,6 +48,7 @@ import { adminEngineRouter } from './http/routes/admin/engine';
 import { adminOpsRouter } from './http/routes/admin/ops';
 import { adminMigrationsRouter } from './http/routes/admin/migrations';
 import { adminFetchmailRouter } from './http/routes/admin/fetchmail';
+import { adminImportRouter } from './http/routes/admin/import';
 import { adminUsersRouter } from './http/routes/admin/users';
 import { adminWebhooksRouter } from './http/routes/admin/webhooks';
 import { adminFeatureFlagsRouter } from './http/routes/admin/feature-flags';
@@ -75,6 +77,7 @@ export interface ServerDeps {
   opsService: OpsService;
   migrationService: MigrationService;
   fetchmailService: FetchmailService;
+  importService: ImportService;
   syncService: SyncService;
   sendJobService: SendJobService;
   userRepo: UserRepository;
@@ -103,6 +106,7 @@ export function createServer(deps: ServerDeps): Express {
     opsService,
     migrationService,
     fetchmailService,
+    importService,
     syncService,
     sendJobService,
     userRepo,
@@ -191,6 +195,7 @@ export function createServer(deps: ServerDeps): Express {
   app.use(adminOpsRouter(opsService));
   app.use(adminMigrationsRouter(migrationService));
   app.use(adminFetchmailRouter(fetchmailService));
+  app.use(adminImportRouter(importService));
   app.use(adminAliasesRouter(aliasService, domainService));
   app.use(adminSyncRouter(syncService));
   app.use(adminUsersRouter(userService));
