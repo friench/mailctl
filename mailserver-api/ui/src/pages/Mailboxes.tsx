@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ResourceTable, formatBoolean, shortDate } from '../components/ResourceTable';
 import { api } from '../api';
-import type { AliasDTO as Alias, AppSettingsDTO, MailboxDTO as Mailbox } from '@contracts';
+import type { AliasDTO as Alias, MailboxDTO as Mailbox } from '@contracts';
 import { useT } from '../i18n';
 
 /** Targets of a mailbox's forwarding alias, excluding the mailbox's own address (the "keep a copy" marker). */
@@ -115,7 +115,9 @@ export function MailboxesPage() {
         return body;
       }}
       rowActions={(row) => (
-        <MailboxActions mailbox={row} forward={forwardByAddress.get(row.address.toLowerCase())} />
+        <Link to={`/admin/mailboxes/${row.id}`} className="text-indigo-600 hover:underline text-xs">
+          {t('mailboxes.settings')} →
+        </Link>
       )}
     />
   );
@@ -139,180 +141,6 @@ function SourceBadge({
       {externallyManaged && (
         <span className="text-xs text-slate-400" title={t('mailboxes.extTitle')}>
           ext
-        </span>
-      )}
-    </span>
-  );
-}
-
-function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alias }) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [status, setStatus] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
-  const settings = useQuery({
-    queryKey: ['settings'],
-    queryFn: () => api.get<AppSettingsDTO>('/admin/api/settings'),
-    staleTime: 5 * 60_000,
-  });
-
-  const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ['mailboxes'] });
-    void queryClient.invalidateQueries({ queryKey: ['aliases'] });
-  };
-
-  const setForward = useMutation({
-    mutationFn: (op: { kind: 'set'; target: string } | { kind: 'clear' }) => {
-      if (op.kind === 'clear') {
-        return forward
-          ? api.delete(`/admin/api/aliases/${forward.id}`)
-          : Promise.resolve(undefined);
-      }
-      return forward
-        ? api.patch(`/admin/api/aliases/${forward.id}`, { target: op.target })
-        : api.post('/admin/api/aliases', { address: mailbox.address, target: op.target });
-    },
-    onSuccess: () => {
-      invalidate();
-      setStatus({ kind: 'ok', text: t('mailboxes.statusForwardUpdated') });
-    },
-    onError: (err) => {
-      setStatus({ kind: 'error', text: err instanceof Error ? err.message : t('common.failed') });
-    },
-  });
-
-  const onForward = () => {
-    const current = forwardTargets(forward, mailbox.address).join(', ');
-    const input = window.prompt(
-      t('mailboxes.promptForward', { address: mailbox.address }),
-      current,
-    );
-    if (input === null) return;
-    const trimmed = input.trim();
-    if (trimmed === '') {
-      setForward.mutate({ kind: 'clear' });
-      return;
-    }
-    const keepCopy = window.confirm(t('mailboxes.promptKeepCopy'));
-    const target = keepCopy ? `${mailbox.address}, ${trimmed}` : trimmed;
-    setForward.mutate({ kind: 'set', target });
-  };
-
-  const changePassword = useMutation({
-    mutationFn: (password: string) =>
-      api.patch(`/admin/api/mailboxes/${mailbox.id}/password`, { password }),
-    onSuccess: () => {
-      invalidate();
-      setStatus({ kind: 'ok', text: t('mailboxes.statusPasswordChanged') });
-    },
-    onError: (err) => {
-      setStatus({ kind: 'error', text: err instanceof Error ? err.message : t('common.failed') });
-    },
-  });
-
-  const edit = useMutation({
-    mutationFn: (body: {
-      quotaMb?: number | null;
-      active?: boolean;
-      sendBlocked?: boolean;
-      receiveBlocked?: boolean;
-    }) => api.patch(`/admin/api/mailboxes/${mailbox.id}`, body),
-    onSuccess: () => {
-      invalidate();
-      setStatus({ kind: 'ok', text: t('mailboxes.statusMailboxUpdated') });
-    },
-    onError: (err) => {
-      setStatus({ kind: 'error', text: err instanceof Error ? err.message : t('common.failed') });
-    },
-  });
-
-  const onChangePassword = () => {
-    const password = window.prompt(t('mailboxes.promptNewPassword', { address: mailbox.address }));
-    if (!password) return;
-    changePassword.mutate(password);
-  };
-
-  const onEdit = () => {
-    const quotaInput = window.prompt(
-      t('mailboxes.promptQuota', { address: mailbox.address }),
-      mailbox.quotaMb != null ? String(mailbox.quotaMb) : '',
-    );
-    if (quotaInput === null) return;
-    const trimmed = quotaInput.trim();
-    const quotaMb = trimmed === '' ? null : Number(trimmed);
-    if (quotaMb !== null && (!Number.isFinite(quotaMb) || quotaMb < 0)) {
-      setStatus({ kind: 'error', text: t('mailboxes.quotaError') });
-      return;
-    }
-    const currentActiveWord = mailbox.active
-      ? t('mailboxes.activeWord')
-      : t('mailboxes.inactiveWord');
-    const active = window.confirm(t('mailboxes.promptActive', { current: currentActiveWord }));
-    edit.mutate({ quotaMb, active });
-  };
-
-  const busy = changePassword.isPending || edit.isPending || setForward.isPending;
-
-  return (
-    <span className="space-x-3">
-      <button
-        type="button"
-        onClick={onChangePassword}
-        disabled={busy}
-        className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
-      >
-        {t('mailboxes.changePassword')}
-      </button>
-      <button
-        type="button"
-        onClick={onForward}
-        disabled={busy}
-        className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
-      >
-        {forwardTargets(forward, mailbox.address).length
-          ? t('mailboxes.editForwarding')
-          : t('mailboxes.forward')}
-      </button>
-      <button
-        type="button"
-        onClick={onEdit}
-        disabled={busy}
-        className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
-      >
-        {t('common.edit')}
-      </button>
-      <button
-        type="button"
-        onClick={() => edit.mutate({ sendBlocked: !mailbox.sendBlocked })}
-        disabled={busy}
-        className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
-      >
-        {mailbox.sendBlocked ? t('mailboxes.allowSend') : t('mailboxes.blockSend')}
-      </button>
-      <button
-        type="button"
-        onClick={() => edit.mutate({ receiveBlocked: !mailbox.receiveBlocked })}
-        disabled={busy}
-        className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
-      >
-        {mailbox.receiveBlocked ? t('mailboxes.allowReceive') : t('mailboxes.blockReceive')}
-      </button>
-      <Link
-        to={`/admin/mailboxes/${mailbox.id}/sieve`}
-        className="text-indigo-600 hover:underline text-xs"
-      >
-        {t('mailboxes.filters')}
-      </Link>
-      {settings.data?.autoconfigEnabled && (
-        <a
-          href={`/mail/mobileconfig?email=${encodeURIComponent(mailbox.address)}`}
-          className="text-indigo-600 hover:underline text-xs"
-        >
-          {t('mailboxes.appleProfile')}
-        </a>
-      )}
-      {status && (
-        <span className={`text-xs ${status.kind === 'ok' ? 'text-slate-600' : 'text-red-700'}`}>
-          {status.text}
         </span>
       )}
     </span>

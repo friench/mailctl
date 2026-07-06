@@ -29,6 +29,7 @@ const mailboxes: NamespaceModule = {
     blockReceive: 'Block receive',
     allowReceive: 'Allow receive',
     filters: 'Filters',
+    settings: 'Settings',
     appleProfile: 'Apple profile',
     promptForward: 'Forward {address} to (comma-separated addresses; empty to clear):',
     promptKeepCopy: 'Keep a local copy?  OK = deliver locally AND forward,  Cancel = forward only.',
@@ -70,6 +71,7 @@ const mailboxes: NamespaceModule = {
     blockReceive: 'Заблок. приём',
     allowReceive: 'Разрешить приём',
     filters: 'Фильтры',
+    settings: 'Настройки',
     appleProfile: 'Профиль Apple',
     promptForward:
       'Переадресация {address}: введите адреса через запятую (оставьте пустым для отмены):',
