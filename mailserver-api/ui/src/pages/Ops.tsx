@@ -2,26 +2,34 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { LogLinesDTO, MailQueueDTO, SessionDTO } from '@contracts';
 import { api } from '../api';
+import { useT } from '../i18n';
 
 type Tab = 'logs' | 'queue' | 'sessions';
 
 export function OpsPage() {
+  const t = useT();
   const [tab, setTab] = useState<Tab>('logs');
+
+  const tabLabels: Record<Tab, string> = {
+    logs: t('ops.tabLogs'),
+    queue: t('ops.tabQueue'),
+    sessions: t('ops.tabSessions'),
+  };
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-slate-900">Operations</h1>
+      <h1 className="text-xl font-semibold text-slate-900">{t('ops.title')}</h1>
       <div className="flex gap-2 text-sm">
-        {(['logs', 'queue', 'sessions'] as Tab[]).map((t) => (
+        {(['logs', 'queue', 'sessions'] as Tab[]).map((tabKey) => (
           <button
-            key={t}
+            key={tabKey}
             type="button"
-            onClick={() => setTab(t)}
-            className={`rounded px-3 py-1 capitalize ${
-              tab === t ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'
+            onClick={() => setTab(tabKey)}
+            className={`rounded px-3 py-1 ${
+              tab === tabKey ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'
             }`}
           >
-            {t}
+            {tabLabels[tabKey]}
           </button>
         ))}
       </div>
@@ -33,6 +41,7 @@ export function OpsPage() {
 }
 
 function LogsView() {
+  const t = useT();
   const [lines, setLines] = useState(200);
   const [q, setQ] = useState('');
   const [applied, setApplied] = useState('');
@@ -49,17 +58,17 @@ function LogsView() {
     <section className="space-y-2">
       <div className="flex flex-wrap items-end gap-2 text-sm">
         <label className="text-xs text-slate-600">
-          Search
+          {t('ops.search')}
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && setApplied(q)}
-            placeholder="substring filter"
+            placeholder={t('ops.filterPlaceholder')}
             className="mt-1 block w-64 rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </label>
         <label className="text-xs text-slate-600">
-          Lines
+          {t('ops.lines')}
           <input
             type="number"
             min={10}
@@ -74,18 +83,23 @@ function LogsView() {
           onClick={() => setApplied(q)}
           className="rounded bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-500"
         >
-          Search
+          {t('ops.search')}
         </button>
-        <span className="text-xs text-slate-500">{logs.data?.lines.length ?? 0} lines</span>
+        <span className="text-xs text-slate-500">
+          {logs.data?.lines.length ?? 0} {t('ops.linesWord')}
+        </span>
       </div>
       <pre className="max-h-[32rem] overflow-auto rounded border border-slate-200 bg-slate-900 p-3 text-xs leading-relaxed text-slate-100">
-        {logs.isLoading ? 'Loading…' : logs.data?.lines.join('\n') || 'No matching log lines.'}
+        {logs.isLoading
+          ? t('common.loading')
+          : logs.data?.lines.join('\n') || t('ops.noMatchingLines')}
       </pre>
     </section>
   );
 }
 
 function QueueView() {
+  const t = useT();
   const queue = useQuery({
     queryKey: ['ops-queue'],
     queryFn: () => api.get<MailQueueDTO>('/admin/api/ops/queue'),
@@ -95,22 +109,22 @@ function QueueView() {
 
   return (
     <section className="rounded border border-slate-200 bg-white p-4">
-      {queue.isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {queue.isLoading && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
       {!queue.isLoading && entries.length === 0 && (
-        <p className="text-sm text-slate-500">Mail queue is empty.</p>
+        <p className="text-sm text-slate-500">{t('ops.queueEmpty')}</p>
       )}
       {entries.length > 0 && (
         <>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                <th className="py-1 pr-2">Queue ID</th>
-                <th className="py-1 pr-2">Status</th>
-                <th className="py-1 pr-2">Size</th>
-                <th className="py-1 pr-2">Arrival</th>
-                <th className="py-1 pr-2">Sender</th>
-                <th className="py-1 pr-2">Recipients</th>
-                <th className="py-1 pr-2">Reason</th>
+                <th className="py-1 pr-2">{t('ops.queueColId')}</th>
+                <th className="py-1 pr-2">{t('ops.queueColStatus')}</th>
+                <th className="py-1 pr-2">{t('ops.queueColSize')}</th>
+                <th className="py-1 pr-2">{t('ops.queueColArrival')}</th>
+                <th className="py-1 pr-2">{t('ops.queueColSender')}</th>
+                <th className="py-1 pr-2">{t('ops.queueColRecipients')}</th>
+                <th className="py-1 pr-2">{t('ops.queueColReason')}</th>
               </tr>
             </thead>
             <tbody>
@@ -149,6 +163,7 @@ function QueueView() {
 }
 
 function SessionsView() {
+  const t = useT();
   const sessions = useQuery({
     queryKey: ['ops-sessions'],
     queryFn: () => api.get<SessionDTO[]>('/admin/api/ops/sessions'),
@@ -158,18 +173,18 @@ function SessionsView() {
 
   return (
     <section className="rounded border border-slate-200 bg-white p-4">
-      {sessions.isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {sessions.isLoading && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
       {!sessions.isLoading && rows.length === 0 && (
-        <p className="text-sm text-slate-500">No active IMAP/POP3 sessions.</p>
+        <p className="text-sm text-slate-500">{t('ops.noSessions')}</p>
       )}
       {rows.length > 0 && (
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-              <th className="py-1 pr-2">User</th>
-              <th className="py-1 pr-2">Proto</th>
-              <th className="py-1 pr-2">Connections</th>
-              <th className="py-1 pr-2">IPs</th>
+              <th className="py-1 pr-2">{t('ops.colUser')}</th>
+              <th className="py-1 pr-2">{t('ops.colProto')}</th>
+              <th className="py-1 pr-2">{t('ops.colConnections')}</th>
+              <th className="py-1 pr-2">{t('ops.colIps')}</th>
             </tr>
           </thead>
           <tbody>

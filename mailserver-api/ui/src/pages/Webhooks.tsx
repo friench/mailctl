@@ -7,38 +7,44 @@ import type {
   CreatedWebhookDTO as CreatedWebhook,
   WebhookDeliveryDTO as Delivery,
 } from '@contracts';
+import { useT } from '../i18n';
 
 const ALL_EVENTS = ['send.completed', 'send.failed', 'mailbox.created', 'mailbox.deleted'];
 
 export function WebhooksPage() {
+  const t = useT();
   return (
     <div>
       <ResourceTable<Webhook>
-        title="Webhooks"
+        title={t('webhooks.title')}
         endpoint="/admin/api/webhooks"
         queryKey={['webhooks']}
         columns={[
-          { key: 'name', header: 'Name', render: (r) => r.name },
+          { key: 'name', header: t('webhooks.colName'), render: (r) => r.name },
           {
             key: 'url',
-            header: 'URL',
+            header: t('webhooks.colUrl'),
             render: (r) => <span className="font-mono text-xs">{r.url}</span>,
           },
-          { key: 'events', header: 'Events', render: (r) => r.events.join(', ') },
-          { key: 'active', header: 'Active', render: (r) => formatBoolean(r.active) },
-          { key: 'created', header: 'Created', render: (r) => shortDate(r.createdAt) },
+          { key: 'events', header: t('webhooks.colEvents'), render: (r) => r.events.join(', ') },
+          {
+            key: 'active',
+            header: t('webhooks.colActive'),
+            render: (r) => formatBoolean(r.active),
+          },
+          { key: 'created', header: t('common.created'), render: (r) => shortDate(r.createdAt) },
         ]}
         createFields={[
-          { name: 'name', label: 'Name', required: true, placeholder: 'my-app' },
+          { name: 'name', label: t('webhooks.fieldName'), required: true, placeholder: 'my-app' },
           {
             name: 'url',
-            label: 'URL',
+            label: t('webhooks.fieldUrl'),
             required: true,
             placeholder: 'https://example.com/hook',
           },
           {
             name: 'events',
-            label: `Events (comma-separated; choose from: ${ALL_EVENTS.join(', ')})`,
+            label: t('webhooks.fieldEvents', { events: ALL_EVENTS.join(', ') }),
             required: true,
             placeholder: 'send.completed,send.failed',
           },
@@ -55,16 +61,11 @@ export function WebhooksPage() {
           const created = result as CreatedWebhook;
           return (
             <div>
-              <p className="text-sm text-amber-700 mb-2">
-                Save this signing secret now — it will not be shown again.
-              </p>
+              <p className="text-sm text-amber-700 mb-2">{t('webhooks.saveSecretNow')}</p>
               <div className="bg-slate-900 text-slate-100 rounded p-3 font-mono text-xs break-all">
                 {created.secret}
               </div>
-              <p className="text-xs text-slate-500 mt-2">
-                Use it to verify HMAC-SHA256 signatures on incoming webhooks (header:{' '}
-                <span className="font-mono">X-Webhook-Signature</span>).
-              </p>
+              <p className="text-xs text-slate-500 mt-2">{t('webhooks.secretUsage')}</p>
             </div>
           );
         }}
@@ -75,6 +76,7 @@ export function WebhooksPage() {
 }
 
 function WebhookRowActions({ webhook }: { webhook: Webhook }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [showResult, setShowResult] = useState(false);
 
@@ -113,7 +115,7 @@ function WebhookRowActions({ webhook }: { webhook: Webhook }) {
         disabled={test.isPending}
         className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
       >
-        {test.isPending ? 'Pinging…' : 'Test'}
+        {test.isPending ? t('webhooks.pinging') : t('webhooks.test')}
       </button>
       <button
         type="button"
@@ -121,12 +123,16 @@ function WebhookRowActions({ webhook }: { webhook: Webhook }) {
         disabled={toggle.isPending}
         className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
       >
-        {toggle.isPending ? 'Saving…' : webhook.active ? 'Disable' : 'Enable'}
+        {toggle.isPending
+          ? t('common.saving')
+          : webhook.active
+            ? t('webhooks.disable')
+            : t('webhooks.enable')}
       </button>
       <button
         type="button"
         onClick={() => {
-          const url = window.prompt('Webhook URL', webhook.url);
+          const url = window.prompt(t('webhooks.promptWebhookUrl'), webhook.url);
           if (url && url.trim() && url.trim() !== webhook.url) {
             editUrl.mutate(url.trim());
           }
@@ -134,7 +140,7 @@ function WebhookRowActions({ webhook }: { webhook: Webhook }) {
         disabled={editUrl.isPending}
         className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
       >
-        {editUrl.isPending ? 'Saving…' : 'Edit URL'}
+        {editUrl.isPending ? t('common.saving') : t('webhooks.editUrl')}
       </button>
       {showResult && test.data && (
         <span className="text-xs text-slate-600">
@@ -143,11 +149,11 @@ function WebhookRowActions({ webhook }: { webhook: Webhook }) {
         </span>
       )}
       {(toggle.isSuccess || editUrl.isSuccess) && !anyError && (
-        <span className="text-xs text-green-700">Saved</span>
+        <span className="text-xs text-green-700">{t('webhooks.saved')}</span>
       )}
       {anyError && (
         <span className="text-xs text-red-700">
-          {anyError instanceof Error ? anyError.message : 'Update failed'}
+          {anyError instanceof Error ? anyError.message : t('webhooks.updateFailed')}
         </span>
       )}
     </span>
@@ -155,6 +161,7 @@ function WebhookRowActions({ webhook }: { webhook: Webhook }) {
 }
 
 export function WebhookDeliveriesPage({ webhookId }: { webhookId: string }) {
+  const t = useT();
   const list = useQuery({
     queryKey: ['webhook-deliveries', webhookId],
     queryFn: () => api.get<Delivery[]>(`/admin/api/webhooks/${webhookId}/deliveries`),
@@ -163,15 +170,17 @@ export function WebhookDeliveriesPage({ webhookId }: { webhookId: string }) {
 
   return (
     <div>
-      {list.isLoading && <div className="p-4 text-slate-500">Loading…</div>}
+      {list.isLoading && <div className="p-4 text-slate-500">{t('common.loading')}</div>}
       {list.data && (
         <table className="w-full text-sm">
           <thead className="bg-slate-100 text-slate-700">
             <tr>
-              <th className="text-left px-4 py-2 font-medium">Event</th>
-              <th className="text-left px-4 py-2 font-medium">Status</th>
-              <th className="text-left px-4 py-2 font-medium">Response</th>
-              <th className="text-left px-4 py-2 font-medium">Created</th>
+              <th className="text-left px-4 py-2 font-medium">{t('webhooks.deliveryColEvent')}</th>
+              <th className="text-left px-4 py-2 font-medium">{t('webhooks.deliveryColStatus')}</th>
+              <th className="text-left px-4 py-2 font-medium">
+                {t('webhooks.deliveryColResponse')}
+              </th>
+              <th className="text-left px-4 py-2 font-medium">{t('common.created')}</th>
             </tr>
           </thead>
           <tbody>

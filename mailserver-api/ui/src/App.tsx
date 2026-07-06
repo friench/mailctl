@@ -26,6 +26,7 @@ import { OpsPage } from './pages/Ops';
 import { MigrationsPage } from './pages/Migrations';
 import { FetchmailPage } from './pages/Fetchmail';
 import { ImportPage } from './pages/Import';
+import { BouncesPage } from './pages/Bounces';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -87,6 +88,7 @@ export default function App() {
             <Route path="smtp-accounts" element={<SmtpAccountsPage />} />
             <Route path="api-keys" element={<ApiKeysPage />} />
             <Route path="send-log" element={<SendLogPage />} />
+            <Route path="bounces" element={<BouncesPage />} />
             <Route path="webhooks" element={<WebhooksPage />} />
             <Route path="feature-flags" element={<FeatureFlagsPage />} />
             <Route path="backups" element={<BackupsPage />} />

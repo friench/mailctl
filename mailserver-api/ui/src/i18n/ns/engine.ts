@@ -1,0 +1,48 @@
+import type { NamespaceModule } from '../types';
+
+const engine: NamespaceModule = {
+  en: {
+    title: 'Engine',
+    enabled: 'enabled',
+    disabled: 'disabled',
+    openRspamdUi: 'Open Rspamd UI ↗',
+    scanned: 'Scanned',
+    spam: 'Spam',
+    ham: 'Ham',
+    learned: 'Learned',
+    noRspamdStats: 'No Rspamd statistics available.',
+    containers: 'Containers',
+    colName: 'Name',
+    colState: 'State',
+    colHealth: 'Health',
+    colImage: 'Image',
+    colStarted: 'Started',
+    restart: 'Restart',
+    featureToggles: 'Feature toggles (mailserver.env)',
+    noSettings: 'No settings available.',
+    dovecotStats: 'Dovecot stats',
+  },
+  ru: {
+    title: 'Движок',
+    enabled: 'включён',
+    disabled: 'отключён',
+    openRspamdUi: 'Открыть UI Rspamd ↗',
+    scanned: 'Проверено',
+    spam: 'Спам',
+    ham: 'Не спам',
+    learned: 'Обучено',
+    noRspamdStats: 'Статистика Rspamd недоступна.',
+    containers: 'Контейнеры',
+    colName: 'Имя',
+    colState: 'Состояние',
+    colHealth: 'Работоспособность',
+    colImage: 'Образ',
+    colStarted: 'Запущен',
+    restart: 'Перезапустить',
+    featureToggles: 'Настройки (mailserver.env)',
+    noSettings: 'Нет доступных настроек.',
+    dovecotStats: 'Статистика Dovecot',
+  },
+};
+
+export default engine;

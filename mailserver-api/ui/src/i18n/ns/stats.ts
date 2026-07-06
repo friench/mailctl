@@ -1,0 +1,48 @@
+import type { NamespaceModule } from '../types';
+
+const stats: NamespaceModule = {
+  en: {
+    title: 'Stats',
+    refreshing: 'Refreshing…',
+    metricsNote: 'Raw Prometheus metrics are available at',
+    metricsPlainText: '(plain text)',
+    failedToLoad: 'Failed to load:',
+    sendQueue: 'Send queue',
+    last24hNote: 'last 24h: done {done} · failed {failed}',
+    pending: 'Pending',
+    processing: 'Processing',
+    done: 'Done',
+    dead: 'Dead',
+    webhooks: 'Webhooks',
+    inventory: 'Inventory',
+    domains: 'Domains',
+    mailboxes: 'Mailboxes',
+    aliases: 'Aliases',
+    smtpAccounts: 'SMTP accounts',
+    apiKeys: 'API keys',
+    generatedAt: 'Generated at {date}',
+  },
+  ru: {
+    title: 'Статистика',
+    refreshing: 'Обновление…',
+    metricsNote: 'Сырые метрики Prometheus доступны по адресу',
+    metricsPlainText: '(текст)',
+    failedToLoad: 'Ошибка загрузки:',
+    sendQueue: 'Очередь отправки',
+    last24hNote: 'за 24ч: выполнено {done} · ошибок {failed}',
+    pending: 'В ожидании',
+    processing: 'В обработке',
+    done: 'Выполнено',
+    dead: 'Мертвые',
+    webhooks: 'Вебхуки',
+    inventory: 'Инвентарь',
+    domains: 'Домены',
+    mailboxes: 'Ящики',
+    aliases: 'Алиасы',
+    smtpAccounts: 'SMTP-аккаунты',
+    apiKeys: 'API-ключи',
+    generatedAt: 'Создано {date}',
+  },
+};
+
+export default stats;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ImportItemResultDTO, ImportResultDTO } from '@contracts';
 import { api } from '../api';
+import { useT } from '../i18n';
 
 const SAMPLE = JSON.stringify(
   {
@@ -14,6 +15,7 @@ const SAMPLE = JSON.stringify(
 );
 
 export function ImportPage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [text, setText] = useState(SAMPLE);
   const [error, setError] = useState<string | null>(null);
@@ -40,18 +42,14 @@ export function ImportPage() {
     },
     onError: (err) => {
       setResult(null);
-      setError(err instanceof Error ? err.message : 'Failed');
+      setError(err instanceof Error ? err.message : t('common.failed'));
     },
   });
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-slate-900">Bulk import</h1>
-      <p className="text-xs text-slate-500">
-        Idempotent provisioning from a JSON document. Domains are created first, then mailboxes,
-        then aliases; anything that already exists is skipped, so re-running is safe. Use a dry run
-        to preview.
-      </p>
+      <h1 className="text-xl font-semibold text-slate-900">{t('import.title')}</h1>
+      <p className="text-xs text-slate-500">{t('import.description')}</p>
 
       <textarea
         value={text}
@@ -67,7 +65,7 @@ export function ImportPage() {
           disabled={run.isPending}
           className="rounded border border-indigo-600 px-3 py-1.5 text-sm text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
         >
-          Dry run
+          {t('import.dryRun')}
         </button>
         <button
           type="button"
@@ -75,7 +73,7 @@ export function ImportPage() {
           disabled={run.isPending}
           className="rounded bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-500 disabled:opacity-50"
         >
-          {run.isPending ? 'Working…' : 'Import'}
+          {run.isPending ? t('import.working') : t('import.import')}
         </button>
         {error && <span className="text-xs text-red-700">{error}</span>}
       </div>
@@ -88,16 +86,18 @@ export function ImportPage() {
                 result.dryRun ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
               }`}
             >
-              {result.dryRun ? 'dry run' : 'applied'}
+              {result.dryRun ? t('import.dryRunBadge') : t('import.applied')}
             </span>
             <span className="text-slate-600">
-              {result.summary.created} {result.dryRun ? 'to create' : 'created'} ·{' '}
-              {result.summary.skipped} skipped · {result.summary.failed} failed
+              {result.summary.created}{' '}
+              {result.dryRun ? t('import.toCreate') : t('import.createdWord')} ·{' '}
+              {result.summary.skipped} {t('import.skippedWord')} · {result.summary.failed}{' '}
+              {t('import.failedWord')}
             </span>
           </div>
-          <ResultTable title="Domains" items={result.domains} />
-          <ResultTable title="Mailboxes" items={result.mailboxes} />
-          <ResultTable title="Aliases" items={result.aliases} />
+          <ResultTable title={t('import.domainsTitle')} items={result.domains} />
+          <ResultTable title={t('import.mailboxesTitle')} items={result.mailboxes} />
+          <ResultTable title={t('import.aliasesTitle')} items={result.aliases} />
         </section>
       )}
     </div>

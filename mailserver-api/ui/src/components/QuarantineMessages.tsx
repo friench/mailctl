@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { QuarantineMessageDTO } from '@contracts';
+import { useT } from '../i18n';
 
 export interface QuarantineMessagesProps {
   messages: QuarantineMessageDTO[];
@@ -27,10 +28,11 @@ export function QuarantineMessages({
   onBulk,
   busy,
 }: QuarantineMessagesProps) {
+  const t = useT();
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
   if (messages.length === 0) {
-    return <p className="text-sm text-slate-500">No quarantined messages.</p>;
+    return <p className="text-sm text-slate-500">{t('quarantineMessages.noMessages')}</p>;
   }
 
   const toggle = (uid: number) =>
@@ -54,14 +56,16 @@ export function QuarantineMessages({
     <div className="space-y-2">
       {onBulk && (
         <div className="flex items-center gap-3 text-xs">
-          <span className="text-slate-500">{selected.size} selected</span>
+          <span className="text-slate-500">
+            {selected.size} {t('quarantineMessages.selected')}
+          </span>
           <button
             type="button"
             onClick={() => bulk('release')}
             disabled={busy || selected.size === 0}
             className="text-indigo-600 hover:underline disabled:opacity-40"
           >
-            Release selected
+            {t('quarantineMessages.releaseSelected')}
           </button>
           <button
             type="button"
@@ -69,7 +73,7 @@ export function QuarantineMessages({
             disabled={busy || selected.size === 0}
             className="text-red-600 hover:underline disabled:opacity-40"
           >
-            Delete selected
+            {t('quarantineMessages.deleteSelected')}
           </button>
         </div>
       )}
@@ -81,12 +85,12 @@ export function QuarantineMessages({
                 <input type="checkbox" checked={allSelected} onChange={toggleAll} />
               </th>
             )}
-            <th className="py-1 pr-2">From</th>
-            <th className="py-1 pr-2">Subject</th>
-            <th className="py-1 pr-2">Date</th>
-            <th className="py-1 pr-2">Score</th>
-            <th className="py-1 pr-2">Size</th>
-            <th className="py-1 pr-2">Actions</th>
+            <th className="py-1 pr-2">{t('quarantineMessages.colFrom')}</th>
+            <th className="py-1 pr-2">{t('quarantineMessages.colSubject')}</th>
+            <th className="py-1 pr-2">{t('quarantineMessages.colDate')}</th>
+            <th className="py-1 pr-2">{t('quarantineMessages.colScore')}</th>
+            <th className="py-1 pr-2">{t('quarantineMessages.colSize')}</th>
+            <th className="py-1 pr-2">{t('common.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -102,7 +106,7 @@ export function QuarantineMessages({
                 </td>
               )}
               <td className="py-1 pr-2 font-mono text-xs">{m.from || '–'}</td>
-              <td className="py-1 pr-2">{m.subject || '(no subject)'}</td>
+              <td className="py-1 pr-2">{m.subject || t('quarantineMessages.noSubject')}</td>
               <td className="py-1 pr-2 text-xs text-slate-500">{m.date || '–'}</td>
               <td className="py-1 pr-2 text-xs">{m.score != null ? m.score.toFixed(1) : '–'}</td>
               <td className="py-1 pr-2 text-xs text-slate-500">{formatSize(m.sizeBytes)}</td>
@@ -114,7 +118,7 @@ export function QuarantineMessages({
                     rel="noreferrer"
                     className="text-slate-600 hover:underline"
                   >
-                    View
+                    {t('quarantineMessages.view')}
                   </a>
                 )}
                 <button
@@ -123,7 +127,7 @@ export function QuarantineMessages({
                   disabled={busy}
                   className="text-indigo-600 hover:underline disabled:opacity-40"
                 >
-                  Release
+                  {t('quarantineMessages.release')}
                 </button>
                 <button
                   type="button"
@@ -131,7 +135,7 @@ export function QuarantineMessages({
                   disabled={busy}
                   className="text-red-600 hover:underline disabled:opacity-40"
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
               </td>
             </tr>

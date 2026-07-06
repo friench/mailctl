@@ -8,6 +8,7 @@ import type {
   DnsRecordDTO as DnsRecord,
   DnsCheckDTO as DnsCheckResponse,
 } from '@contracts';
+import { useT } from '../i18n';
 
 const STATUS_BADGE: Record<DnsRecord['status'], string> = {
   ok: 'bg-emerald-100 text-emerald-800',
@@ -17,6 +18,7 @@ const STATUS_BADGE: Record<DnsRecord['status'], string> = {
 };
 
 export function DomainDetailPage() {
+  const t = useT();
   const { id = '' } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [dkimError, setDkimError] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export function DomainDetailPage() {
       void queryClient.invalidateQueries({ queryKey: ['domain-dns', id] });
     },
     onError: (err) => {
-      setDkimError(err instanceof ApiError ? err.message : 'Regeneration failed');
+      setDkimError(err instanceof ApiError ? err.message : t('domainDetail.regenerationFailed'));
     },
   });
 
@@ -57,11 +59,11 @@ export function DomainDetailPage() {
     },
   });
 
-  if (domain.isLoading) return <div className="text-slate-500">Loading…</div>;
+  if (domain.isLoading) return <div className="text-slate-500">{t('common.loading')}</div>;
   if (domain.isError || !domain.data) {
     return (
       <div className="text-red-700">
-        Failed to load domain: {(domain.error as Error)?.message ?? 'not found'}
+        {t('domainDetail.loadError')} {(domain.error as Error)?.message ?? 'not found'}
       </div>
     );
   }
@@ -74,7 +76,7 @@ export function DomainDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link to="/admin/domains" className="text-sm text-indigo-600 hover:underline">
-          ← Domains
+          {t('domainDetail.backLink')}
         </Link>
         <h1 className="text-2xl font-semibold text-slate-900">{d.name}</h1>
         <span
@@ -82,7 +84,7 @@ export function DomainDetailPage() {
             d.active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
           }`}
         >
-          {d.active ? 'active' : 'disabled'}
+          {d.active ? t('domainDetail.active') : t('domainDetail.disabled')}
         </span>
         <span
           className={`text-xs px-2 py-0.5 rounded ${
@@ -98,18 +100,18 @@ export function DomainDetailPage() {
 
         {d.dkimStatus === 'dns_republish_required' && (
           <div className="text-sm bg-amber-100 text-amber-800 rounded px-3 py-2">
-            DKIM changed — DNS TXT must be re-published.
+            {t('domainDetail.dkimRepublishWarning')}
           </div>
         )}
 
         <dl className="grid grid-cols-[160px_1fr] gap-y-2 text-sm">
-          <dt className="text-slate-500">Selector</dt>
+          <dt className="text-slate-500">{t('domainDetail.dtSelector')}</dt>
           <dd className="font-mono">{d.dkimSelector ?? '—'}</dd>
 
-          <dt className="text-slate-500">DNS record</dt>
+          <dt className="text-slate-500">{t('domainDetail.dtDnsRecord')}</dt>
           <dd className="font-mono break-all">{dkimRecord}</dd>
 
-          <dt className="text-slate-500">Public key</dt>
+          <dt className="text-slate-500">{t('domainDetail.dtPublicKey')}</dt>
           <dd>
             {dkimTxt ? (
               <div className="space-y-1">
@@ -124,11 +126,11 @@ export function DomainDetailPage() {
                   onClick={() => navigator.clipboard.writeText(dkimTxt)}
                   className="text-xs text-indigo-600 hover:underline"
                 >
-                  Copy TXT value
+                  {t('domainDetail.copyTxt')}
                 </button>
               </div>
             ) : (
-              <span className="text-slate-500">no key generated yet</span>
+              <span className="text-slate-500">{t('domainDetail.noKeyYet')}</span>
             )}
           </dd>
         </dl>
@@ -137,7 +139,7 @@ export function DomainDetailPage() {
           <div className="flex flex-wrap items-end gap-3">
             <div>
               <label className="block text-xs text-slate-500 mb-1" htmlFor="dkim-selector">
-                Selector (optional)
+                {t('domainDetail.labelSelector')}
               </label>
               <input
                 id="dkim-selector"
@@ -150,7 +152,7 @@ export function DomainDetailPage() {
             </div>
             <div>
               <label className="block text-xs text-slate-500 mb-1" htmlFor="dkim-keysize">
-                Key size
+                {t('domainDetail.labelKeySize')}
               </label>
               <select
                 id="dkim-keysize"
@@ -169,27 +171,25 @@ export function DomainDetailPage() {
               className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 disabled:opacity-50"
             >
               {regenerate.isPending
-                ? 'Generating…'
+                ? t('domainDetail.generating')
                 : d.dkimPublicKey
-                  ? 'Regenerate DKIM'
-                  : 'Generate DKIM'}
+                  ? t('domainDetail.regenerateDkim')
+                  : t('domainDetail.generateDkim')}
             </button>
           </div>
           {dkimError && <div className="text-sm text-red-700">{dkimError}</div>}
-          <p className="text-xs text-slate-500">
-            Regenerating overwrites the existing OpenDKIM key. After publishing the new TXT record,
-            run a DNS recheck.
-          </p>
+          <p className="text-xs text-slate-500">{t('domainDetail.dkimHint')}</p>
         </div>
       </section>
 
       <section className="bg-white rounded shadow p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-slate-900">DNS check</h2>
+          <h2 className="font-semibold text-slate-900">{t('domainDetail.sectionDnsCheck')}</h2>
           <div className="flex items-center gap-3 text-sm">
             {dns.data && (
               <span className="text-slate-500">
-                Checked {shortDate(dns.data.checkedAt)} {dns.data.cached && '(cached)'}
+                {t('domainDetail.checked')} {shortDate(dns.data.checkedAt)}{' '}
+                {dns.data.cached && t('domainDetail.cached')}
               </span>
             )}
             <button
@@ -198,22 +198,30 @@ export function DomainDetailPage() {
               disabled={refresh.isPending || dns.isLoading}
               className="px-3 py-1 border border-slate-300 rounded text-xs hover:bg-slate-50 disabled:opacity-50"
             >
-              {refresh.isPending ? 'Refreshing…' : 'Refresh'}
+              {refresh.isPending ? t('domainDetail.refreshing') : t('common.refresh')}
             </button>
           </div>
         </div>
-        {dns.isLoading && <div className="text-slate-500 text-sm">Querying DNS…</div>}
+        {dns.isLoading && (
+          <div className="text-slate-500 text-sm">{t('domainDetail.queryingDns')}</div>
+        )}
         {dns.isError && (
-          <div className="text-red-700 text-sm">Failed: {(dns.error as Error).message}</div>
+          <div className="text-red-700 text-sm">
+            {t('domainDetail.dnsError')} {(dns.error as Error).message}
+          </div>
         )}
         {dns.data && (
           <table className="w-full text-sm">
             <thead className="text-slate-700">
               <tr>
-                <th className="text-left px-2 py-1 font-medium w-20">Type</th>
-                <th className="text-left px-2 py-1 font-medium">Hostname</th>
-                <th className="text-left px-2 py-1 font-medium w-28">Status</th>
-                <th className="text-left px-2 py-1 font-medium">Value</th>
+                <th className="text-left px-2 py-1 font-medium w-20">
+                  {t('domainDetail.colType')}
+                </th>
+                <th className="text-left px-2 py-1 font-medium">{t('domainDetail.colHostname')}</th>
+                <th className="text-left px-2 py-1 font-medium w-28">
+                  {t('domainDetail.colStatus')}
+                </th>
+                <th className="text-left px-2 py-1 font-medium">{t('domainDetail.colValue')}</th>
               </tr>
             </thead>
             <tbody>
@@ -248,8 +256,8 @@ export function DomainDetailPage() {
       </section>
 
       <section className="text-xs text-slate-500">
-        Created {shortDate(d.createdAt)} · Source {d.source} · Last synced{' '}
-        {shortDate(d.lastSyncedAt)}
+        {t('common.created')} {shortDate(d.createdAt)} · {t('domainDetail.footerSource')} {d.source}{' '}
+        · {t('domainDetail.footerLastSynced')} {shortDate(d.lastSyncedAt)}
       </section>
     </div>
   );

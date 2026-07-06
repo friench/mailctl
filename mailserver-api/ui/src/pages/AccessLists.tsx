@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AccessActionDTO, AccessMatchTypeDTO, AccessRuleDTO } from '@contracts';
 import { api } from '../api';
+import { useT } from '../i18n';
 
 const MATCH_TYPES: AccessMatchTypeDTO[] = ['email', 'domain', 'ip'];
 const ACTIONS: AccessActionDTO[] = ['block', 'allow'];
 
 export function AccessListsPage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [form, setForm] = useState({
     matchType: 'email' as AccessMatchTypeDTO,
@@ -36,20 +38,20 @@ export function AccessListsPage() {
     onSuccess: () => {
       invalidate();
       setForm((f) => ({ ...f, value: '', recipient: '', note: '' }));
-      setStatus({ kind: 'ok', text: 'Rule added' });
+      setStatus({ kind: 'ok', text: t('accessLists.ruleAdded') });
     },
     onError: (err) =>
-      setStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Failed' }),
+      setStatus({ kind: 'error', text: err instanceof Error ? err.message : t('common.failed') }),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => api.delete(`/admin/api/access-rules/${id}`),
     onSuccess: () => {
       invalidate();
-      setStatus({ kind: 'ok', text: 'Rule removed' });
+      setStatus({ kind: 'ok', text: t('accessLists.ruleRemoved') });
     },
     onError: (err) =>
-      setStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Failed' }),
+      setStatus({ kind: 'error', text: err instanceof Error ? err.message : t('common.failed') }),
   });
 
   const input = 'rounded border border-slate-300 px-2 py-1 text-sm';
@@ -57,17 +59,14 @@ export function AccessListsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-slate-900">Allow / deny lists</h1>
-      <p className="text-xs text-slate-500">
-        Block or allow senders by email, domain, or client IP. Global rules are enforced via Postfix
-        access maps and Rspamd; a recipient scopes a rule to one mailbox (enforced via Rspamd).
-      </p>
+      <h1 className="text-xl font-semibold text-slate-900">{t('accessLists.title')}</h1>
+      <p className="text-xs text-slate-500">{t('accessLists.description')}</p>
 
       <section className="rounded border border-slate-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">Add rule</h2>
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">{t('accessLists.addRule')}</h2>
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-xs text-slate-600">
-            Action
+            {t('accessLists.action')}
             <select
               className={`${input} mt-1 block`}
               value={form.action}
@@ -81,7 +80,7 @@ export function AccessListsPage() {
             </select>
           </label>
           <label className="text-xs text-slate-600">
-            Match
+            {t('accessLists.match')}
             <select
               className={`${input} mt-1 block`}
               value={form.matchType}
@@ -97,7 +96,7 @@ export function AccessListsPage() {
             </select>
           </label>
           <label className="text-xs text-slate-600">
-            Value
+            {t('accessLists.value')}
             <input
               className={`${input} mt-1 block w-56`}
               placeholder={
@@ -108,7 +107,7 @@ export function AccessListsPage() {
             />
           </label>
           <label className="text-xs text-slate-600">
-            Recipient (optional)
+            {t('accessLists.recipient')} ({t('common.optional')})
             <input
               className={`${input} mt-1 block w-52`}
               placeholder="user@example.org — global if empty"
@@ -117,7 +116,7 @@ export function AccessListsPage() {
             />
           </label>
           <label className="text-xs text-slate-600">
-            Note (optional)
+            {t('accessLists.note')} ({t('common.optional')})
             <input
               className={`${input} mt-1 block w-40`}
               value={form.note}
@@ -130,7 +129,7 @@ export function AccessListsPage() {
             disabled={create.isPending || form.value.trim() === ''}
             className="rounded bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-500 disabled:opacity-50"
           >
-            {create.isPending ? 'Adding…' : 'Add'}
+            {create.isPending ? t('accessLists.adding') : t('common.add')}
           </button>
         </div>
         {status && (
@@ -141,19 +140,19 @@ export function AccessListsPage() {
       </section>
 
       <section className="rounded border border-slate-200 bg-white p-4">
-        {rules.isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+        {rules.isLoading && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
         {!rules.isLoading && data.length === 0 && (
-          <p className="text-sm text-slate-500">No rules yet.</p>
+          <p className="text-sm text-slate-500">{t('accessLists.noRules')}</p>
         )}
         {data.length > 0 && (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                <th className="py-1 pr-2">Action</th>
-                <th className="py-1 pr-2">Match</th>
-                <th className="py-1 pr-2">Value</th>
-                <th className="py-1 pr-2">Scope</th>
-                <th className="py-1 pr-2">Note</th>
+                <th className="py-1 pr-2">{t('accessLists.action')}</th>
+                <th className="py-1 pr-2">{t('accessLists.match')}</th>
+                <th className="py-1 pr-2">{t('accessLists.value')}</th>
+                <th className="py-1 pr-2">{t('accessLists.colScope')}</th>
+                <th className="py-1 pr-2">{t('accessLists.note')}</th>
                 <th className="py-1 pr-2"></th>
               </tr>
             </thead>
@@ -177,7 +176,7 @@ export function AccessListsPage() {
                     {r.recipient ? (
                       <span className="font-mono text-slate-600">→ {r.recipient}</span>
                     ) : (
-                      <span className="text-slate-400">global</span>
+                      <span className="text-slate-400">{t('accessLists.global')}</span>
                     )}
                   </td>
                   <td className="py-1 pr-2 text-xs text-slate-500">{r.note ?? '–'}</td>
@@ -188,7 +187,7 @@ export function AccessListsPage() {
                       disabled={remove.isPending}
                       className="text-red-600 hover:underline text-xs disabled:opacity-40"
                     >
-                      Delete
+                      {t('common.delete')}
                     </button>
                   </td>
                 </tr>

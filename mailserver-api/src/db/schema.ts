@@ -177,6 +177,38 @@ export const accessRules = sqliteTable(
 export type AccessRuleRow = typeof accessRules.$inferSelect;
 export type AccessRuleInsert = typeof accessRules.$inferInsert;
 
+export const BOUNCE_TYPES = ['bounce', 'complaint'] as const;
+export type BounceType = (typeof BOUNCE_TYPES)[number];
+export const BOUNCE_CLASSIFICATIONS = ['hard', 'soft', 'unknown'] as const;
+export type BounceClassificationType = (typeof BOUNCE_CLASSIFICATIONS)[number];
+
+/**
+ * A captured delivery-status notification (bounce) for one recipient, correlated
+ * to the originating send job by the message id when possible.
+ */
+export const bounceEvents = sqliteTable(
+  'bounce_events',
+  {
+    id: text('id').primaryKey(),
+    sendJobId: text('send_job_id').references(() => sendJobs.id, { onDelete: 'set null' }),
+    recipient: text('recipient').notNull(),
+    type: text('type', { enum: BOUNCE_TYPES }).notNull().default('bounce'),
+    classification: text('classification', { enum: BOUNCE_CLASSIFICATIONS })
+      .notNull()
+      .default('unknown'),
+    statusCode: text('status_code'),
+    diagnostic: text('diagnostic'),
+    originalMessageId: text('original_message_id'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => ({
+    recipientIdx: index('bounce_events_recipient_idx').on(table.recipient),
+    sendJobIdIdx: index('bounce_events_send_job_id_idx').on(table.sendJobId),
+  }),
+);
+
+export type BounceEventRow = typeof bounceEvents.$inferSelect;
+
 export const FETCHMAIL_PROTOCOLS = ['imap', 'pop3'] as const;
 export type FetchmailProtocol = (typeof FETCHMAIL_PROTOCOLS)[number];
 

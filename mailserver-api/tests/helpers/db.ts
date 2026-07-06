@@ -21,6 +21,8 @@ import { MigrationJobRepository } from '../../src/domain/migrations/repository';
 import { MigrationService } from '../../src/domain/migrations/service';
 import { FetchmailRepository } from '../../src/domain/fetchmail/repository';
 import { FetchmailService } from '../../src/domain/fetchmail/service';
+import { BounceRepository } from '../../src/domain/bounces/repository';
+import { BounceService } from '../../src/domain/bounces/service';
 import { makeSecretBox } from '../../src/lib/secret-box';
 import { SyncService } from '../../src/domain/sync/service';
 import { SendJobRepository } from '../../src/domain/queue/repository';
@@ -92,6 +94,8 @@ export interface TestDbHandle {
   migrationService: MigrationService;
   migrator: FakeMigrator;
   fetchmailService: FetchmailService;
+  bounceService: BounceService;
+  bounceRepo: BounceRepository;
   syncService: SyncService;
   sendJobRepo: SendJobRepository;
   userRepo: UserRepository;
@@ -182,6 +186,9 @@ export function createTestDb(
   );
   const syncService = new SyncService(dms, domainRepo, mailboxRepo, aliasRepo, silentLogger);
 
+  const bounceRepo = new BounceRepository(client.db);
+  const bounceService = new BounceService(bounceRepo, sendJobRepo, silentLogger, webhookService);
+
   const dnsResolver = new StubDnsResolver();
   const dnsValidator = new DnsValidator({ resolver: dnsResolver });
   const domainDnsService = new DomainDnsService(dnsValidator, { ttlMs: 0 });
@@ -205,6 +212,8 @@ export function createTestDb(
     migrationService,
     migrator,
     fetchmailService,
+    bounceService,
+    bounceRepo,
     syncService,
     sendJobRepo,
     userRepo,

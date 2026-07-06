@@ -381,6 +381,23 @@ export interface SessionDTO {
   ips: string[];
 }
 
+// ── bounces / delivery feedback ──────────────────────────────────────────────
+
+export type BounceTypeDTO = 'bounce' | 'complaint';
+export type BounceClassificationDTO = 'hard' | 'soft' | 'unknown';
+
+export interface BounceEventDTO {
+  id: string;
+  sendJobId: string | null;
+  recipient: string;
+  type: BounceTypeDTO;
+  classification: BounceClassificationDTO;
+  statusCode: string | null;
+  diagnostic: string | null;
+  originalMessageId: string | null;
+  createdAt: string;
+}
+
 // ── bulk import ──────────────────────────────────────────────────────────────
 
 export type ImportActionDTO = 'created' | 'skipped' | 'failed';

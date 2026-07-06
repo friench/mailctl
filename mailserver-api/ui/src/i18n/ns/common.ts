@@ -1,0 +1,53 @@
+import type { NamespaceModule } from '../types';
+
+/** Shared UI strings reused across pages (buttons, statuses, table chrome). */
+const common: NamespaceModule = {
+  en: {
+    save: 'Save',
+    add: 'Add',
+    create: 'Create',
+    edit: 'Edit',
+    delete: 'Delete',
+    cancel: 'Cancel',
+    close: 'Close',
+    refresh: 'Refresh',
+    loading: 'Loading…',
+    saving: 'Saving…',
+    actions: 'Actions',
+    none: 'None',
+    yes: 'Yes',
+    no: 'No',
+    active: 'active',
+    inactive: 'inactive',
+    created: 'Created',
+    failed: 'Failed',
+    language: 'Language',
+    signOut: 'Sign out',
+    optional: 'optional',
+  },
+  ru: {
+    save: 'Сохранить',
+    add: 'Добавить',
+    create: 'Создать',
+    edit: 'Изменить',
+    delete: 'Удалить',
+    cancel: 'Отмена',
+    close: 'Закрыть',
+    refresh: 'Обновить',
+    loading: 'Загрузка…',
+    saving: 'Сохранение…',
+    actions: 'Действия',
+    none: 'Нет',
+    yes: 'Да',
+    no: 'Нет',
+    active: 'активен',
+    inactive: 'неактивен',
+    created: 'Создан',
+    failed: 'Ошибка',
+    language: 'Язык',
+    signOut: 'Выйти',
+    optional: 'необязательно',
+  },
+};
+
+export default common;

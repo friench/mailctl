@@ -1,0 +1,53 @@
+import type { NamespaceModule } from '../types';
+
+/** Sidebar navigation labels (keys mirror the route paths). */
+const nav: NamespaceModule = {
+  en: {
+    dashboard: 'Dashboard',
+    stats: 'Stats',
+    domains: 'Domains',
+    mailboxes: 'Mailboxes',
+    aliases: 'Aliases',
+    import: 'Bulk import',
+    quarantine: 'Quarantine',
+    accessLists: 'Allow / deny',
+    engine: 'Engine',
+    ops: 'Operations',
+    migrations: 'Migrations',
+    fetchmail: 'Fetchmail',
+    sync: 'Sync',
+    smtpAccounts: 'SMTP accounts',
+    apiKeys: 'API keys',
+    sendLog: 'Send log',
+    bounces: 'Bounces',
+    webhooks: 'Webhooks',
+    featureFlags: 'Feature flags',
+    backups: 'Backups',
+    users: 'Users',
+  },
+  ru: {
+    dashboard: 'Панель',
+    stats: 'Статистика',
+    domains: 'Домены',
+    mailboxes: 'Ящики',
+    aliases: 'Алиасы',
+    import: 'Массовый импорт',
+    quarantine: 'Карантин',
+    accessLists: 'Списки доступа',
+    engine: 'Движок',
+    ops: 'Операции',
+    migrations: 'Миграции',
+    fetchmail: 'Fetchmail',
+    sync: 'Синхронизация',
+    smtpAccounts: 'SMTP-аккаунты',
+    apiKeys: 'API-ключи',
+    sendLog: 'Лог отправки',
+    bounces: 'Возвраты',
+    webhooks: 'Вебхуки',
+    featureFlags: 'Фичефлаги',
+    backups: 'Бэкапы',
+    users: 'Пользователи',
+  },
+};
+
+export default nav;

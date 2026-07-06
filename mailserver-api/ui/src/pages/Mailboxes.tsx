@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ResourceTable, formatBoolean, shortDate } from '../components/ResourceTable';
 import { api } from '../api';
 import type { AliasDTO as Alias, AppSettingsDTO, MailboxDTO as Mailbox } from '@contracts';
+import { useT } from '../i18n';
 
 /** Targets of a mailbox's forwarding alias, excluding the mailbox's own address (the "keep a copy" marker). */
 function forwardTargets(alias: Alias | undefined, address: string): string[] {
@@ -15,6 +16,7 @@ function forwardTargets(alias: Alias | undefined, address: string): string[] {
 }
 
 export function MailboxesPage() {
+  const t = useT();
   const aliases = useQuery({
     queryKey: ['aliases'],
     queryFn: () => api.get<Alias[]>('/admin/api/aliases'),
@@ -27,35 +29,37 @@ export function MailboxesPage() {
 
   return (
     <ResourceTable<Mailbox>
-      title="Mailboxes"
+      title={t('mailboxes.title')}
       endpoint="/admin/api/mailboxes"
       queryKey={['mailboxes']}
       columns={[
         {
           key: 'address',
-          header: 'Address',
+          header: t('mailboxes.colAddress'),
           render: (r) => <span className="font-mono">{r.address}</span>,
         },
-        { key: 'quota', header: 'Quota (MB)', render: (r) => r.quotaMb ?? '–' },
-        { key: 'active', header: 'Active', render: (r) => formatBoolean(r.active) },
+        { key: 'quota', header: t('mailboxes.colQuota'), render: (r) => r.quotaMb ?? '–' },
+        { key: 'active', header: t('mailboxes.colActive'), render: (r) => formatBoolean(r.active) },
         {
           key: 'delivery',
-          header: 'Send / Receive',
+          header: t('mailboxes.colDelivery'),
           render: (r) => (
             <span className="text-xs">
               <span className={r.sendBlocked ? 'text-red-600' : 'text-emerald-600'}>
-                send {r.sendBlocked ? 'blocked' : 'ok'}
+                {t('mailboxes.sendPrefix')}{' '}
+                {r.sendBlocked ? t('mailboxes.statusBlocked') : t('mailboxes.statusOk')}
               </span>
               {' · '}
               <span className={r.receiveBlocked ? 'text-red-600' : 'text-emerald-600'}>
-                recv {r.receiveBlocked ? 'blocked' : 'ok'}
+                {t('mailboxes.recvPrefix')}{' '}
+                {r.receiveBlocked ? t('mailboxes.statusBlocked') : t('mailboxes.statusOk')}
               </span>
             </span>
           ),
         },
         {
           key: 'forwarding',
-          header: 'Forwarding',
+          header: t('mailboxes.colForwarding'),
           render: (r) => {
             const targets = forwardTargets(
               forwardByAddress.get(r.address.toLowerCase()),
@@ -70,28 +74,36 @@ export function MailboxesPage() {
         },
         {
           key: 'source',
-          header: 'Source',
+          header: t('mailboxes.colSource'),
           render: (r) => <SourceBadge source={r.source} externallyManaged={r.externallyManaged} />,
         },
-        { key: 'synced', header: 'Last sync', render: (r) => shortDate(r.lastSyncedAt) },
+        {
+          key: 'synced',
+          header: t('mailboxes.colLastSync'),
+          render: (r) => shortDate(r.lastSyncedAt),
+        },
         {
           key: 'notes',
-          header: 'Notes',
+          header: t('mailboxes.colNotes'),
           render: (r) => <span className="text-slate-500 text-xs">{r.notes ?? '–'}</span>,
         },
-        { key: 'created', header: 'Created', render: (r) => shortDate(r.createdAt) },
+        {
+          key: 'created',
+          header: t('mailboxes.colCreated'),
+          render: (r) => shortDate(r.createdAt),
+        },
       ]}
       createFields={[
         {
           name: 'address',
-          label: 'Email address',
+          label: t('mailboxes.fieldAddress'),
           required: true,
           type: 'email',
           placeholder: 'user@example.com',
         },
-        { name: 'password', label: 'Password (min 8 chars)', required: true, type: 'password' },
-        { name: 'quotaMb', label: 'Quota MB (optional)', type: 'number' },
-        { name: 'notes', label: 'Notes (optional)' },
+        { name: 'password', label: t('mailboxes.fieldPassword'), required: true, type: 'password' },
+        { name: 'quotaMb', label: t('mailboxes.fieldQuota'), type: 'number' },
+        { name: 'notes', label: t('mailboxes.fieldNotes') },
       ]}
       transformCreate={(values) => {
         const body: Record<string, unknown> = {
@@ -116,6 +128,7 @@ function SourceBadge({
   source: 'panel' | 'dms';
   externallyManaged: boolean;
 }) {
+  const t = useT();
   const className =
     source === 'dms' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700';
   return (
@@ -124,7 +137,7 @@ function SourceBadge({
         {source}
       </span>
       {externallyManaged && (
-        <span className="text-xs text-slate-400" title="Managed outside the panel">
+        <span className="text-xs text-slate-400" title={t('mailboxes.extTitle')}>
           ext
         </span>
       )}
@@ -133,6 +146,7 @@ function SourceBadge({
 }
 
 function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alias }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const settings = useQuery({
@@ -159,17 +173,17 @@ function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alia
     },
     onSuccess: () => {
       invalidate();
-      setStatus({ kind: 'ok', text: 'Forwarding updated' });
+      setStatus({ kind: 'ok', text: t('mailboxes.statusForwardUpdated') });
     },
     onError: (err) => {
-      setStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Failed' });
+      setStatus({ kind: 'error', text: err instanceof Error ? err.message : t('common.failed') });
     },
   });
 
   const onForward = () => {
     const current = forwardTargets(forward, mailbox.address).join(', ');
     const input = window.prompt(
-      `Forward ${mailbox.address} to (comma-separated addresses; empty to clear):`,
+      t('mailboxes.promptForward', { address: mailbox.address }),
       current,
     );
     if (input === null) return;
@@ -178,9 +192,7 @@ function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alia
       setForward.mutate({ kind: 'clear' });
       return;
     }
-    const keepCopy = window.confirm(
-      'Keep a local copy?  OK = deliver locally AND forward,  Cancel = forward only.',
-    );
+    const keepCopy = window.confirm(t('mailboxes.promptKeepCopy'));
     const target = keepCopy ? `${mailbox.address}, ${trimmed}` : trimmed;
     setForward.mutate({ kind: 'set', target });
   };
@@ -190,10 +202,10 @@ function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alia
       api.patch(`/admin/api/mailboxes/${mailbox.id}/password`, { password }),
     onSuccess: () => {
       invalidate();
-      setStatus({ kind: 'ok', text: 'Password changed' });
+      setStatus({ kind: 'ok', text: t('mailboxes.statusPasswordChanged') });
     },
     onError: (err) => {
-      setStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Failed' });
+      setStatus({ kind: 'error', text: err instanceof Error ? err.message : t('common.failed') });
     },
   });
 
@@ -206,34 +218,35 @@ function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alia
     }) => api.patch(`/admin/api/mailboxes/${mailbox.id}`, body),
     onSuccess: () => {
       invalidate();
-      setStatus({ kind: 'ok', text: 'Mailbox updated' });
+      setStatus({ kind: 'ok', text: t('mailboxes.statusMailboxUpdated') });
     },
     onError: (err) => {
-      setStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Failed' });
+      setStatus({ kind: 'error', text: err instanceof Error ? err.message : t('common.failed') });
     },
   });
 
   const onChangePassword = () => {
-    const password = window.prompt(`New password for ${mailbox.address} (min 8 chars):`);
+    const password = window.prompt(t('mailboxes.promptNewPassword', { address: mailbox.address }));
     if (!password) return;
     changePassword.mutate(password);
   };
 
   const onEdit = () => {
     const quotaInput = window.prompt(
-      `Quota MB for ${mailbox.address} (empty to clear):`,
+      t('mailboxes.promptQuota', { address: mailbox.address }),
       mailbox.quotaMb != null ? String(mailbox.quotaMb) : '',
     );
     if (quotaInput === null) return;
     const trimmed = quotaInput.trim();
     const quotaMb = trimmed === '' ? null : Number(trimmed);
     if (quotaMb !== null && (!Number.isFinite(quotaMb) || quotaMb < 0)) {
-      setStatus({ kind: 'error', text: 'Quota must be a non-negative number' });
+      setStatus({ kind: 'error', text: t('mailboxes.quotaError') });
       return;
     }
-    const active = window.confirm(
-      `Active? OK = active, Cancel = inactive (currently ${mailbox.active ? 'active' : 'inactive'}).`,
-    );
+    const currentActiveWord = mailbox.active
+      ? t('mailboxes.activeWord')
+      : t('mailboxes.inactiveWord');
+    const active = window.confirm(t('mailboxes.promptActive', { current: currentActiveWord }));
     edit.mutate({ quotaMb, active });
   };
 
@@ -247,7 +260,7 @@ function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alia
         disabled={busy}
         className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
       >
-        Change password
+        {t('mailboxes.changePassword')}
       </button>
       <button
         type="button"
@@ -255,7 +268,9 @@ function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alia
         disabled={busy}
         className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
       >
-        {forwardTargets(forward, mailbox.address).length ? 'Edit forwarding' : 'Forward'}
+        {forwardTargets(forward, mailbox.address).length
+          ? t('mailboxes.editForwarding')
+          : t('mailboxes.forward')}
       </button>
       <button
         type="button"
@@ -263,7 +278,7 @@ function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alia
         disabled={busy}
         className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
       >
-        Edit
+        {t('common.edit')}
       </button>
       <button
         type="button"
@@ -271,7 +286,7 @@ function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alia
         disabled={busy}
         className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
       >
-        {mailbox.sendBlocked ? 'Allow send' : 'Block send'}
+        {mailbox.sendBlocked ? t('mailboxes.allowSend') : t('mailboxes.blockSend')}
       </button>
       <button
         type="button"
@@ -279,20 +294,20 @@ function MailboxActions({ mailbox, forward }: { mailbox: Mailbox; forward?: Alia
         disabled={busy}
         className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
       >
-        {mailbox.receiveBlocked ? 'Allow receive' : 'Block receive'}
+        {mailbox.receiveBlocked ? t('mailboxes.allowReceive') : t('mailboxes.blockReceive')}
       </button>
       <Link
         to={`/admin/mailboxes/${mailbox.id}/sieve`}
         className="text-indigo-600 hover:underline text-xs"
       >
-        Filters
+        {t('mailboxes.filters')}
       </Link>
       {settings.data?.autoconfigEnabled && (
         <a
           href={`/mail/mobileconfig?email=${encodeURIComponent(mailbox.address)}`}
           className="text-indigo-600 hover:underline text-xs"
         >
-          Apple profile
+          {t('mailboxes.appleProfile')}
         </a>
       )}
       {status && (

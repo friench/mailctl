@@ -9,6 +9,7 @@ import type {
   SyncRunSummary,
   ApplyItemResult,
 } from '@contracts';
+import { useT } from '../i18n';
 
 interface Preview {
   items: ReconciliationItem[];
@@ -26,15 +27,6 @@ interface Selection {
   fields?: Record<string, 'dms' | 'db'>;
   password?: string;
 }
-
-const RESOLUTION_LABEL: Record<Resolution, string> = {
-  import: 'import ← DMS',
-  push: 'push → DMS',
-  field_pick: 'pick field…',
-  delete_db: 'delete in DB',
-  delete_dms: 'delete in DMS',
-  skip: 'skip',
-};
 
 const FIELD_BY_ENTITY: Record<EntityType, string> = {
   mailbox: 'quota',
@@ -59,10 +51,20 @@ function renderState(state: Record<string, unknown> | null): string {
 }
 
 export function SyncPage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [selections, setSelections] = useState<Record<string, Selection>>({});
   const [confirmDeletes, setConfirmDeletes] = useState(false);
   const [outcome, setOutcome] = useState<ApplyOutcome | null>(null);
+
+  const resolutionLabel: Record<Resolution, string> = {
+    import: t('sync.resImport'),
+    push: t('sync.resPush'),
+    field_pick: t('sync.resFieldPick'),
+    delete_db: t('sync.resDeleteDb'),
+    delete_dms: t('sync.resDeleteDms'),
+    skip: t('sync.resSkip'),
+  };
 
   const preview = useQuery({
     queryKey: ['sync-preview'],
@@ -123,34 +125,41 @@ export function SyncPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold text-slate-900">Sync with mail server</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">{t('sync.title')}</h1>
         <button
           type="button"
           onClick={() => void preview.refetch()}
           className="px-3 py-1.5 bg-slate-200 text-slate-800 rounded text-sm hover:bg-slate-300"
         >
-          Refresh preview
+          {t('sync.refreshPreview')}
         </button>
       </div>
 
       <p className="text-sm text-slate-600 mb-4">
-        Review every divergence between docker-mailserver and the panel database, then choose a
-        direction per row. Nothing is written until you press <strong>Apply selected</strong>.
-        Deletions require the confirmation box.
+        {t('sync.descPre')}
+        <strong>{t('sync.descStrong')}</strong>
+        {t('sync.descPost')}
       </p>
 
       {preview.data?.lastRun && (
         <div className="text-xs text-slate-500 mb-3">
-          Last apply: {shortDate(preview.data.lastRun.at)} — applied {preview.data.lastRun.applied},
-          failed {preview.data.lastRun.failed}, rejected {preview.data.lastRun.rejected}
+          {t('sync.lastApplyNote', {
+            date: shortDate(preview.data.lastRun.at),
+            applied: preview.data.lastRun.applied,
+            failed: preview.data.lastRun.failed,
+            rejected: preview.data.lastRun.rejected,
+          })}
         </div>
       )}
 
       {outcome && (
         <div className="bg-white rounded shadow p-3 mb-4 text-sm">
           <div className="font-medium mb-1">
-            Applied {outcome.summary.applied} · failed {outcome.summary.failed} · rejected{' '}
-            {outcome.summary.rejected}
+            {t('sync.outcomeLabel', {
+              applied: outcome.summary.applied,
+              failed: outcome.summary.failed,
+              rejected: outcome.summary.rejected,
+            })}
           </div>
           {outcome.results
             .filter((r) => r.status !== 'applied')
@@ -164,27 +173,29 @@ export function SyncPage() {
       )}
 
       <div className="bg-white rounded shadow overflow-x-auto">
-        {preview.isLoading && <div className="p-4 text-slate-500">Loading…</div>}
+        {preview.isLoading && <div className="p-4 text-slate-500">{t('sync.loading')}</div>}
         {preview.isError && (
-          <div className="p-4 text-red-700">Failed to load: {(preview.error as Error).message}</div>
+          <div className="p-4 text-red-700">
+            {t('sync.failedToLoad')} {(preview.error as Error).message}
+          </div>
         )}
         {preview.data && (
           <table className="w-full text-sm">
             <thead className="bg-slate-100 text-slate-700">
               <tr>
-                <th className="text-left px-3 py-2 font-medium">Type</th>
-                <th className="text-left px-3 py-2 font-medium">Key</th>
-                <th className="text-left px-3 py-2 font-medium">Divergence</th>
-                <th className="text-left px-3 py-2 font-medium">DMS</th>
-                <th className="text-left px-3 py-2 font-medium">DB</th>
-                <th className="text-left px-3 py-2 font-medium">Resolution</th>
+                <th className="text-left px-3 py-2 font-medium">{t('sync.colType')}</th>
+                <th className="text-left px-3 py-2 font-medium">{t('sync.colKey')}</th>
+                <th className="text-left px-3 py-2 font-medium">{t('sync.colDivergence')}</th>
+                <th className="text-left px-3 py-2 font-medium">{t('sync.colDms')}</th>
+                <th className="text-left px-3 py-2 font-medium">{t('sync.colDb')}</th>
+                <th className="text-left px-3 py-2 font-medium">{t('sync.colResolution')}</th>
               </tr>
             </thead>
             <tbody>
               {items.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
-                    No divergence — DMS and the panel database are in sync.
+                    {t('sync.noItems')}
                   </td>
                 </tr>
               )}
@@ -214,7 +225,7 @@ export function SyncPage() {
                       >
                         {[...new Set<Resolution>([...it.availableResolutions, 'skip'])].map((r) => (
                           <option key={r} value={r}>
-                            {RESOLUTION_LABEL[r]}
+                            {resolutionLabel[r]}
                           </option>
                         ))}
                       </select>
@@ -224,14 +235,14 @@ export function SyncPage() {
                           onChange={(e) => setField(it, e.target.value as 'dms' | 'db')}
                           className="border border-slate-300 rounded text-xs px-1 py-0.5 ml-1"
                         >
-                          <option value="dms">use DMS</option>
-                          <option value="db">use DB</option>
+                          <option value="dms">{t('sync.useDms')}</option>
+                          <option value="db">{t('sync.useDb')}</option>
                         </select>
                       )}
                       {resolution === 'push' && it.entityType === 'mailbox' && (
                         <input
                           type="password"
-                          placeholder="mailbox password"
+                          placeholder={t('sync.pwPlaceholder')}
                           value={sel?.password ?? ''}
                           onChange={(e) => setPassword(it, e.target.value)}
                           className="block border border-slate-300 rounded text-xs px-1 py-0.5 mt-1"
@@ -254,7 +265,9 @@ export function SyncPage() {
             disabled={apply.isPending || chosen.length === 0 || (anyDelete && !confirmDeletes)}
             className="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 disabled:opacity-50"
           >
-            {apply.isPending ? 'Applying…' : `Apply selected (${chosen.length})`}
+            {apply.isPending
+              ? t('sync.applying')
+              : t('sync.applySelected', { count: chosen.length })}
           </button>
           {anyDelete && (
             <label className="flex items-center gap-2 text-sm text-red-700">
@@ -264,7 +277,7 @@ export function SyncPage() {
                 onChange={(e) => setConfirmDeletes(e.target.checked)}
                 className="h-4 w-4"
               />
-              Confirm deletions (destructive)
+              {t('sync.confirmDeletions')}
             </label>
           )}
         </div>
