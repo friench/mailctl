@@ -99,6 +99,8 @@ export interface ApiKeyDTO {
   name: string;
   prefix: string;
   scopes: string[];
+  /** Per-key send policy: `/send` skips the suppression list for this key. */
+  suppressionExempt: boolean;
   expiresAt: string | null;
   lastUsedAt: string | null;
   revokedAt: string | null;
@@ -379,6 +381,19 @@ export interface SessionDTO {
   connections: number;
   proto: string;
   ips: string[];
+}
+
+// ── suppression list ─────────────────────────────────────────────────────────
+
+export type SuppressionReasonDTO = 'hard_bounce' | 'complaint' | 'manual' | 'unsubscribe';
+
+export interface SuppressionDTO {
+  id: string;
+  address: string;
+  reason: SuppressionReasonDTO;
+  source: string | null;
+  note: string | null;
+  createdAt: string;
 }
 
 // ── bounces / delivery feedback ──────────────────────────────────────────────

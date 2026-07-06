@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import type { ApiKeyService } from '../../../domain/apikeys/service';
 import { serializeApiKey } from '../../../domain/apikeys/serialize';
 import { asyncHandler } from '../../../lib/async-handler';
-import { createApiKeySchema } from '../../validators/apikeys';
+import { createApiKeySchema, updateApiKeySchema } from '../../validators/apikeys';
 
 export function adminApiKeysRouter(service: ApiKeyService) {
   const router = Router();
@@ -14,9 +14,10 @@ export function adminApiKeysRouter(service: ApiKeyService) {
   router.post(
     '/admin/api/api-keys',
     asyncHandler(async (req: Request, res: Response) => {
-      const { name, scopes, expiresAt } = createApiKeySchema.parse(req.body);
+      const { name, scopes, suppressionExempt, expiresAt } = createApiKeySchema.parse(req.body);
       const created = service.generateAndStore(name, {
         scopes,
+        suppressionExempt,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
       });
       // The plaintext key is returned ONLY here, never again.
@@ -30,6 +31,13 @@ export function adminApiKeysRouter(service: ApiKeyService) {
       });
     }),
   );
+
+  // Toggle the per-key suppression-exempt send policy.
+  router.patch('/admin/api/api-keys/:id', (req: Request, res: Response) => {
+    const { suppressionExempt } = updateApiKeySchema.parse(req.body);
+    const row = service.setSuppressionExempt(String(req.params.id ?? ''), suppressionExempt);
+    res.json(serializeApiKey(row));
+  });
 
   // Revoke (soft-disable) rather than hard-delete: keeps the audit trail and
   // immediately invalidates the key (verify → 'revoked').

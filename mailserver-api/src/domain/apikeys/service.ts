@@ -25,6 +25,7 @@ export interface CreatedApiKey {
 
 export interface CreateOptions {
   scopes?: string[];
+  suppressionExempt?: boolean;
   expiresAt?: Date | null;
   createdByUserId?: string | null;
 }
@@ -39,6 +40,7 @@ export class ApiKeyService {
       hash,
       prefix,
       scopes: options.scopes,
+      suppressionExempt: options.suppressionExempt ?? false,
       expiresAt: options.expiresAt ?? null,
       createdByUserId: options.createdByUserId ?? null,
     });
@@ -75,6 +77,13 @@ export class ApiKeyService {
 
   revoke(id: string): void {
     this.repo.revoke(id);
+  }
+
+  setSuppressionExempt(id: string, exempt: boolean): ApiKeyRow {
+    const row = this.repo.findById(id);
+    if (!row) throw new Error('API key not found');
+    this.repo.setSuppressionExempt(id, exempt);
+    return { ...row, suppressionExempt: exempt };
   }
 
   list(): ApiKeyRow[] {

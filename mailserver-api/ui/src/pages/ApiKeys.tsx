@@ -1,5 +1,7 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ApiKeyDTO as ApiKey, CreatedApiKeyDTO as CreatedApiKey } from '@contracts';
 import { ResourceTable, shortDate } from '../components/ResourceTable';
+import { api } from '../api';
 import { useT } from '../i18n';
 
 export function ApiKeysPage() {
@@ -31,9 +33,15 @@ export function ApiKeysPage() {
           header: t('apiKeys.colRevoked'),
           render: (r) => (r.revokedAt ? '✓' : '–'),
         },
+        {
+          key: 'exempt',
+          header: t('apiKeys.colExempt'),
+          render: (r) => (r.suppressionExempt ? '✓' : '–'),
+        },
         { key: 'expires', header: t('apiKeys.colExpires'), render: (r) => shortDate(r.expiresAt) },
         { key: 'created', header: t('common.created'), render: (r) => shortDate(r.createdAt) },
       ]}
+      rowActions={(row) => <ExemptToggle apiKey={row} />}
       createFields={[
         { name: 'name', label: t('apiKeys.fieldName'), required: true, placeholder: 'my-app' },
         { name: 'scopes', label: t('apiKeys.fieldScopes') },
@@ -69,5 +77,28 @@ export function ApiKeysPage() {
         );
       }}
     />
+  );
+}
+
+/** Toggle a key's per-key suppression-exempt send policy. */
+function ExemptToggle({ apiKey }: { apiKey: ApiKey }) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const toggle = useMutation({
+    mutationFn: () =>
+      api.patch(`/admin/api/api-keys/${apiKey.id}`, {
+        suppressionExempt: !apiKey.suppressionExempt,
+      }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['api-keys'] }),
+  });
+  return (
+    <button
+      type="button"
+      onClick={() => toggle.mutate()}
+      disabled={toggle.isPending || !!apiKey.revokedAt}
+      className="text-indigo-600 hover:underline text-xs disabled:opacity-40"
+    >
+      {apiKey.suppressionExempt ? t('apiKeys.unexempt') : t('apiKeys.exempt')}
+    </button>
   );
 }

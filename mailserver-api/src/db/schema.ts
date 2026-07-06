@@ -32,6 +32,8 @@ export const apiKeys = sqliteTable(
     hash: text('hash').notNull(),
     prefix: text('prefix').notNull().unique(),
     scopes: text('scopes', { mode: 'json' }).$type<string[]>().notNull(),
+    /** Per-key send policy: when true, `/send` bypasses the suppression list. */
+    suppressionExempt: integer('suppression_exempt', { mode: 'boolean' }).notNull().default(false),
     expiresAt: integer('expires_at', { mode: 'timestamp' }),
     lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
     revokedAt: integer('revoked_at', { mode: 'timestamp' }),
@@ -176,6 +178,26 @@ export const accessRules = sqliteTable(
 
 export type AccessRuleRow = typeof accessRules.$inferSelect;
 export type AccessRuleInsert = typeof accessRules.$inferInsert;
+
+export const SUPPRESSION_REASONS = ['hard_bounce', 'complaint', 'manual', 'unsubscribe'] as const;
+export type SuppressionReason = (typeof SUPPRESSION_REASONS)[number];
+
+/**
+ * A recipient address the sender should not deliver to (hard bounce, complaint,
+ * or a manual/unsubscribe entry). Enforced on `POST /send` unless the API key is
+ * suppression-exempt.
+ */
+export const suppressions = sqliteTable('suppressions', {
+  id: text('id').primaryKey(),
+  address: text('address').notNull().unique(),
+  reason: text('reason', { enum: SUPPRESSION_REASONS }).notNull().default('manual'),
+  /** Provenance, e.g. a bounce event id or `manual`. */
+  source: text('source'),
+  note: text('note'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+export type SuppressionRow = typeof suppressions.$inferSelect;
 
 export const BOUNCE_TYPES = ['bounce', 'complaint'] as const;
 export type BounceType = (typeof BOUNCE_TYPES)[number];

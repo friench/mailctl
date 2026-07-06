@@ -8,6 +8,7 @@ export interface CreateApiKeyInput {
   hash: string;
   prefix: string;
   scopes?: string[];
+  suppressionExempt?: boolean;
   expiresAt?: Date | null;
   createdByUserId?: string | null;
 }
@@ -23,6 +24,7 @@ export class ApiKeyRepository {
       hash: input.hash,
       prefix: input.prefix,
       scopes: input.scopes ?? [],
+      suppressionExempt: input.suppressionExempt ?? false,
       expiresAt: input.expiresAt ?? null,
       lastUsedAt: null,
       revokedAt: null,
@@ -47,6 +49,10 @@ export class ApiKeyRepository {
 
   revoke(id: string, when: Date = new Date()): void {
     this.db.update(apiKeys).set({ revokedAt: when }).where(eq(apiKeys.id, id)).run();
+  }
+
+  setSuppressionExempt(id: string, exempt: boolean): void {
+    this.db.update(apiKeys).set({ suppressionExempt: exempt }).where(eq(apiKeys.id, id)).run();
   }
 
   delete(id: string): void {

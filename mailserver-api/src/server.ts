@@ -22,6 +22,7 @@ import type { MigrationService } from './domain/migrations/service';
 import type { FetchmailService } from './domain/fetchmail/service';
 import type { ImportService } from './domain/import/service';
 import type { BounceService } from './domain/bounces/service';
+import type { SuppressionService } from './domain/suppressions/service';
 import type { SyncService } from './domain/sync/service';
 import type { SendJobService } from './domain/queue/service';
 import type { UserRepository } from './domain/users/repository';
@@ -52,6 +53,7 @@ import { adminMigrationsRouter } from './http/routes/admin/migrations';
 import { adminFetchmailRouter } from './http/routes/admin/fetchmail';
 import { adminImportRouter } from './http/routes/admin/import';
 import { adminBouncesRouter } from './http/routes/admin/bounces';
+import { adminSuppressionsRouter } from './http/routes/admin/suppressions';
 import { adminUsersRouter } from './http/routes/admin/users';
 import { adminWebhooksRouter } from './http/routes/admin/webhooks';
 import { adminFeatureFlagsRouter } from './http/routes/admin/feature-flags';
@@ -82,6 +84,7 @@ export interface ServerDeps {
   fetchmailService: FetchmailService;
   importService: ImportService;
   bounceService: BounceService;
+  suppressionService: SuppressionService;
   syncService: SyncService;
   sendJobService: SendJobService;
   userRepo: UserRepository;
@@ -113,6 +116,7 @@ export function createServer(deps: ServerDeps): Express {
     fetchmailService,
     importService,
     bounceService,
+    suppressionService,
     syncService,
     sendJobService,
     userRepo,
@@ -184,7 +188,7 @@ export function createServer(deps: ServerDeps): Express {
       isDomainManaged: (domain) => domainService.list().some((d) => d.name === domain && d.active),
     }),
   );
-  app.use(sendRouter(mailer, sendJobService, apiKeyService, logger));
+  app.use(sendRouter(mailer, sendJobService, apiKeyService, suppressionService, logger));
   app.use(jobsRouter(sendJobService, apiKeyService, userRepo, logger));
 
   app.use(authRouter(userService, userRepo, oidc));
@@ -204,6 +208,7 @@ export function createServer(deps: ServerDeps): Express {
   app.use(adminFetchmailRouter(fetchmailService));
   app.use(adminImportRouter(importService));
   app.use(adminBouncesRouter(bounceService));
+  app.use(adminSuppressionsRouter(suppressionService));
   app.use(adminAliasesRouter(aliasService, domainService));
   app.use(adminSyncRouter(syncService));
   app.use(adminUsersRouter(userService));

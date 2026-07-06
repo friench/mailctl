@@ -27,6 +27,7 @@ import { MigrationsPage } from './pages/Migrations';
 import { FetchmailPage } from './pages/Fetchmail';
 import { ImportPage } from './pages/Import';
 import { BouncesPage } from './pages/Bounces';
+import { SuppressionsPage } from './pages/Suppressions';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -89,6 +90,7 @@ export default function App() {
             <Route path="api-keys" element={<ApiKeysPage />} />
             <Route path="send-log" element={<SendLogPage />} />
             <Route path="bounces" element={<BouncesPage />} />
+            <Route path="suppressions" element={<SuppressionsPage />} />
             <Route path="webhooks" element={<WebhooksPage />} />
             <Route path="feature-flags" element={<FeatureFlagsPage />} />
             <Route path="backups" element={<BackupsPage />} />
