@@ -19,6 +19,7 @@ import { BackupsPage } from './pages/Backups';
 import { StatsPage } from './pages/Stats';
 import { SelfServicePage } from './pages/SelfService';
 import { MailboxSievePage } from './pages/MailboxSieve';
+import { MailboxDetailPage } from './pages/MailboxDetail';
 import { QuarantinePage } from './pages/Quarantine';
 import { AccessListsPage } from './pages/AccessLists';
 import { EnginePage } from './pages/Engine';
@@ -76,6 +77,7 @@ export default function App() {
             <Route path="domains" element={<DomainsPage />} />
             <Route path="domains/:id" element={<DomainDetailPage />} />
             <Route path="mailboxes" element={<MailboxesPage />} />
+            <Route path="mailboxes/:id" element={<MailboxDetailPage />} />
             <Route path="mailboxes/:id/sieve" element={<MailboxSievePage />} />
             <Route path="aliases" element={<AliasesPage />} />
             <Route path="import" element={<ImportPage />} />
