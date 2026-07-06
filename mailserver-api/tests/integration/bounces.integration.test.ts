@@ -3,6 +3,7 @@ import request from 'supertest';
 import type { Express } from 'express';
 import { createTestDb, type TestDbHandle } from '../helpers/db';
 import { createTestApp } from '../helpers/server';
+import type { WebhookEvent } from '../../src/db/schema';
 
 function bounceFor(messageId: string, recipient = 'nouser@dest.com', status = '5.1.1'): string {
   return `Content-Type: multipart/report; report-type=delivery-status; boundary="B"
@@ -79,7 +80,7 @@ describe('/admin/api/bounces', () => {
     const events: string[] = [];
     // Spy on the shared webhook dispatcher used as the event sink.
     const orig = h.webhookService.dispatch.bind(h.webhookService);
-    h.webhookService.dispatch = (event: string, payload: Record<string, unknown>) => {
+    h.webhookService.dispatch = (event: WebhookEvent, payload: Record<string, unknown>) => {
       events.push(event);
       return orig(event, payload);
     };

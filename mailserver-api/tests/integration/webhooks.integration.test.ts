@@ -88,6 +88,17 @@ describe('/admin/api/webhooks CRUD', () => {
     expect(res.status).toBe(400);
   });
 
+  it('accepts a subscription to send.bounced', async () => {
+    // Regression: BounceService dispatches send.bounced, but it was missing from
+    // WEBHOOK_EVENTS, so the subscription was rejected and the event was undeliverable.
+    const res = await request(app)
+      .post('/admin/api/webhooks')
+      .set('X-Api-Key', adminKey)
+      .send({ name: 'bounce-hook', url: 'https://example.com/hook', events: ['send.bounced'] });
+    expect(res.status).toBe(201);
+    expect(res.body.events).toEqual(['send.bounced']);
+  });
+
   it('rejects non-http URLs', async () => {
     const res = await request(app)
       .post('/admin/api/webhooks')

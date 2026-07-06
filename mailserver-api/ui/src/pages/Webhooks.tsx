@@ -9,7 +9,14 @@ import type {
 } from '@contracts';
 import { useT } from '../i18n';
 
-const ALL_EVENTS = ['send.completed', 'send.failed', 'mailbox.created', 'mailbox.deleted'];
+const ALL_EVENTS = [
+  'send.completed',
+  'send.failed',
+  'send.bounced',
+  'mailbox.created',
+  'mailbox.deleted',
+  'sync.divergence_detected',
+];
 
 export function WebhooksPage() {
   const t = useT();
