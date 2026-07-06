@@ -134,6 +134,13 @@
       "when": 1783340772308,
       "tag": "0018_loving_callisto",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1783355695922,
+      "tag": "0019_charming_paladin",
+      "breakpoints": true
     }
   ]
 }

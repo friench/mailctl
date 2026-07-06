@@ -82,6 +82,10 @@ export interface SmtpAccountDTO {
   host: string;
   port: number;
   secure: boolean;
+  /** Per-account TLS policy. */
+  requireTls: boolean;
+  rejectUnauthorized: boolean | null;
+  minTlsVersion: 'TLSv1.2' | 'TLSv1.3' | null;
   userEnvVar: string | null;
   passwordEnvVar: string | null;
   fromAddress: string;

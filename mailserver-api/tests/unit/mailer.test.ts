@@ -27,6 +27,9 @@ function resolved(name: string, overrides: Partial<ResolvedSmtpAccount> = {}): R
     fromName: null,
     from: `${name}@example.com`,
     priority: 1,
+    requireTls: false,
+    rejectUnauthorized: null,
+    minTlsVersion: null,
     ...overrides,
   };
 }

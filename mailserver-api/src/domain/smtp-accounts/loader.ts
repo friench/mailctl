@@ -1,4 +1,4 @@
-import type { SmtpAccountRow } from '../../db/schema';
+import type { MinTlsVersion, SmtpAccountRow } from '../../db/schema';
 import type { SmtpAccountRepository } from './repository';
 
 /**
@@ -18,6 +18,11 @@ export interface ResolvedSmtpAccount {
   /** Constructed: `"Name" <addr>` if fromName, else just `addr`. */
   from: string;
   priority: number;
+  /** Per-account TLS policy. */
+  requireTls: boolean;
+  /** null → inherit the global SMTP_TLS_REJECT_UNAUTHORIZED default. */
+  rejectUnauthorized: boolean | null;
+  minTlsVersion: MinTlsVersion | null;
 }
 
 export class SmtpAccountLoader {
@@ -47,6 +52,9 @@ export class SmtpAccountLoader {
       fromName: row.fromName,
       from,
       priority: row.priority,
+      requireTls: row.requireTls,
+      rejectUnauthorized: row.rejectUnauthorized,
+      minTlsVersion: row.minTlsVersion,
     };
   }
 }

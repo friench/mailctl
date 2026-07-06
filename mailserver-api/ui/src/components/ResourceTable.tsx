@@ -12,10 +12,12 @@ export interface Column<T> {
 export interface FormField {
   name: string;
   label: string;
-  type?: 'text' | 'email' | 'password' | 'number' | 'checkbox';
+  type?: 'text' | 'email' | 'password' | 'number' | 'checkbox' | 'select';
   required?: boolean;
   placeholder?: string;
   defaultValue?: string | number | boolean;
+  /** Options for a `select` field. */
+  options?: { value: string; label: string }[];
 }
 
 export interface ResourceTableProps<T extends { id: string }> {
@@ -196,7 +198,7 @@ function CreateForm({ fields, error, submitting, onSubmit }: CreateFormProps) {
     for (const f of fields) {
       if (f.defaultValue !== undefined) initial[f.name] = f.defaultValue;
       else if (f.type === 'checkbox') initial[f.name] = false;
-      else if (f.type === 'number') initial[f.name] = '';
+      else if (f.type === 'select') initial[f.name] = f.options?.[0]?.value ?? '';
       else initial[f.name] = '';
     }
     return initial;
@@ -223,6 +225,19 @@ function CreateForm({ fields, error, submitting, onSubmit }: CreateFormProps) {
               onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.checked }))}
               className="h-4 w-4"
             />
+          ) : f.type === 'select' ? (
+            <select
+              id={f.name}
+              value={String(values[f.name] ?? '')}
+              onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))}
+              className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {(f.options ?? []).map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           ) : (
             <input
               id={f.name}
