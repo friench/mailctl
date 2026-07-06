@@ -33,6 +33,8 @@ import { MigrationWorker } from './workers/migration-worker';
 import { FetchmailRepository } from './domain/fetchmail/repository';
 import { FetchmailService } from './domain/fetchmail/service';
 import { ImportService } from './domain/import/service';
+import { BounceRepository } from './domain/bounces/repository';
+import { BounceService } from './domain/bounces/service';
 import { HttpOidcProvider, DisabledOidcProvider } from './domain/auth/oidc-provider';
 import type { OidcRouteOptions } from './http/routes/auth';
 import { makeSecretBox } from './lib/secret-box';
@@ -247,6 +249,13 @@ const sendJobRepo = new SendJobRepository(dbClient.db);
 const sendJobService = new SendJobService(sendJobRepo, mailer, logger, webhookService);
 sendJobService.recoverStuckJobs();
 
+const bounceService = new BounceService(
+  new BounceRepository(dbClient.db),
+  sendJobRepo,
+  logger,
+  webhookService,
+);
+
 const backupS3 =
   env.BACKUP_S3_BUCKET && env.BACKUP_S3_ACCESS_KEY_ID && env.BACKUP_S3_SECRET_ACCESS_KEY
     ? {
@@ -341,6 +350,7 @@ const app = createServer({
   migrationService,
   fetchmailService,
   importService,
+  bounceService,
   syncService,
   sendJobService,
   userRepo,

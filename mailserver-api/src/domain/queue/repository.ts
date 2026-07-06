@@ -43,6 +43,11 @@ export class SendJobRepository {
     return this.db.select().from(sendJobs).where(eq(sendJobs.id, id)).get();
   }
 
+  /** Correlate a bounce back to its send job via the SMTP Message-ID. */
+  findByMessageId(messageId: string): SendJobRow | undefined {
+    return this.db.select().from(sendJobs).where(eq(sendJobs.messageId, messageId)).get();
+  }
+
   list(opts: ListSendJobsOptions = {}): SendJobRow[] {
     const limit = opts.limit ?? 100;
     const base = this.db.select().from(sendJobs);

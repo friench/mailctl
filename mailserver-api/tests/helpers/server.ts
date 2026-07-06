@@ -130,6 +130,7 @@ export function createTestApp(
     migrationService: h.migrationService,
     fetchmailService: h.fetchmailService,
     importService,
+    bounceService: h.bounceService,
     syncService: h.syncService,
     sendJobService,
     userRepo: h.userRepo,

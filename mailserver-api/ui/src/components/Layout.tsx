@@ -22,6 +22,7 @@ const NAV = [
   { to: '/admin/smtp-accounts', labelKey: 'nav.smtpAccounts' },
   { to: '/admin/api-keys', labelKey: 'nav.apiKeys' },
   { to: '/admin/send-log', labelKey: 'nav.sendLog' },
+  { to: '/admin/bounces', labelKey: 'nav.bounces' },
   { to: '/admin/webhooks', labelKey: 'nav.webhooks' },
   { to: '/admin/feature-flags', labelKey: 'nav.featureFlags' },
   { to: '/admin/backups', labelKey: 'nav.backups' },

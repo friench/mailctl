@@ -555,6 +555,29 @@ register(
   ({ dryRun, ...doc }) => client.post(`/admin/api/import?dryRun=${dryRun ? 'true' : 'false'}`, doc),
 );
 
+// ---- bounces / delivery feedback ----
+register(
+  'list_bounces',
+  {
+    title: 'List bounces',
+    description: 'List captured delivery-status notifications (GET /admin/api/bounces).',
+    readOnly: true,
+  },
+  {},
+  () => client.get('/admin/api/bounces'),
+);
+
+register(
+  'ingest_bounce',
+  {
+    title: 'Ingest bounce',
+    description:
+      'Parse a raw DSN/bounce email and record it, correlating to the send job by message id (POST /admin/api/bounces/ingest).',
+  },
+  { raw: z.string().describe('The raw bounce email (headers + body)') },
+  ({ raw }) => client.post('/admin/api/bounces/ingest', { raw }),
+);
+
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
