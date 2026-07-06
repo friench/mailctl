@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { api } from '../api';
+import { useT } from '../i18n';
 
 interface AuthConfig {
   oidc: { enabled: boolean; label: string };
@@ -17,6 +18,7 @@ const SSO_ERRORS: Record<string, string> = {
 
 export function Login() {
   const { user, login, loading } = useAuth();
+  const t = useT();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
@@ -50,7 +52,7 @@ export function Login() {
       await login(email, password);
       navigate('/admin/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : t('login.loginFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -59,11 +61,11 @@ export function Login() {
   return (
     <div className="min-h-screen grid place-items-center bg-slate-100">
       <div className="bg-white shadow rounded p-6 w-80">
-        <h1 className="text-xl font-semibold mb-4">mail-api admin</h1>
+        <h1 className="text-xl font-semibold mb-4">{t('login.title')}</h1>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
             <label className="block text-sm text-slate-700 mb-1" htmlFor="email">
-              Email
+              {t('login.email')}
             </label>
             <input
               id="email"
@@ -77,7 +79,7 @@ export function Login() {
           </div>
           <div>
             <label className="block text-sm text-slate-700 mb-1" htmlFor="password">
-              Password
+              {t('login.password')}
             </label>
             <input
               id="password"
@@ -95,7 +97,7 @@ export function Login() {
             disabled={submitting}
             className="w-full px-3 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 disabled:opacity-50"
           >
-            {submitting ? 'Signing in…' : 'Sign in'}
+            {submitting ? t('login.signingIn') : t('login.signIn')}
           </button>
         </form>
 
@@ -103,14 +105,14 @@ export function Login() {
           <>
             <div className="my-4 flex items-center gap-2 text-xs text-slate-400">
               <span className="h-px flex-1 bg-slate-200" />
-              or
+              {t('login.or')}
               <span className="h-px flex-1 bg-slate-200" />
             </div>
             <a
               href="/admin/auth/oidc/start"
               className="block w-full rounded border border-slate-300 px-3 py-2 text-center text-sm text-slate-700 hover:bg-slate-50"
             >
-              {authConfig.oidc.label || 'Sign in with SSO'}
+              {authConfig.oidc.label || t('login.ssoDefault')}
             </a>
           </>
         )}

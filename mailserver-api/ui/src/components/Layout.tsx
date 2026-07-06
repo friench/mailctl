@@ -3,32 +3,34 @@ import { useQuery } from '@tanstack/react-query';
 import type { AppSettingsDTO } from '@contracts';
 import { useAuth } from '../auth';
 import { api } from '../api';
+import { useI18n, LOCALES } from '../i18n';
 
 const NAV = [
-  { to: '/admin/', label: 'Dashboard', end: true },
-  { to: '/admin/stats', label: 'Stats' },
-  { to: '/admin/domains', label: 'Domains' },
-  { to: '/admin/mailboxes', label: 'Mailboxes' },
-  { to: '/admin/aliases', label: 'Aliases' },
-  { to: '/admin/import', label: 'Bulk import' },
-  { to: '/admin/quarantine', label: 'Quarantine' },
-  { to: '/admin/access-lists', label: 'Allow / deny' },
-  { to: '/admin/engine', label: 'Engine' },
-  { to: '/admin/ops', label: 'Operations' },
-  { to: '/admin/migrations', label: 'Migrations' },
-  { to: '/admin/fetchmail', label: 'Fetchmail' },
-  { to: '/admin/sync', label: 'Sync' },
-  { to: '/admin/smtp-accounts', label: 'SMTP accounts' },
-  { to: '/admin/api-keys', label: 'API keys' },
-  { to: '/admin/send-log', label: 'Send log' },
-  { to: '/admin/webhooks', label: 'Webhooks' },
-  { to: '/admin/feature-flags', label: 'Feature flags' },
-  { to: '/admin/backups', label: 'Backups' },
-  { to: '/admin/users', label: 'Users' },
+  { to: '/admin/', labelKey: 'nav.dashboard', end: true },
+  { to: '/admin/stats', labelKey: 'nav.stats' },
+  { to: '/admin/domains', labelKey: 'nav.domains' },
+  { to: '/admin/mailboxes', labelKey: 'nav.mailboxes' },
+  { to: '/admin/aliases', labelKey: 'nav.aliases' },
+  { to: '/admin/import', labelKey: 'nav.import' },
+  { to: '/admin/quarantine', labelKey: 'nav.quarantine' },
+  { to: '/admin/access-lists', labelKey: 'nav.accessLists' },
+  { to: '/admin/engine', labelKey: 'nav.engine' },
+  { to: '/admin/ops', labelKey: 'nav.ops' },
+  { to: '/admin/migrations', labelKey: 'nav.migrations' },
+  { to: '/admin/fetchmail', labelKey: 'nav.fetchmail' },
+  { to: '/admin/sync', labelKey: 'nav.sync' },
+  { to: '/admin/smtp-accounts', labelKey: 'nav.smtpAccounts' },
+  { to: '/admin/api-keys', labelKey: 'nav.apiKeys' },
+  { to: '/admin/send-log', labelKey: 'nav.sendLog' },
+  { to: '/admin/webhooks', labelKey: 'nav.webhooks' },
+  { to: '/admin/feature-flags', labelKey: 'nav.featureFlags' },
+  { to: '/admin/backups', labelKey: 'nav.backups' },
+  { to: '/admin/users', labelKey: 'nav.users' },
 ];
 
 export function Layout() {
   const { user, logout } = useAuth();
+  const { t, locale, setLocale } = useI18n();
   const settings = useQuery({
     queryKey: ['settings'],
     queryFn: () => api.get<AppSettingsDTO>('/admin/api/settings'),
@@ -52,7 +54,7 @@ export function Layout() {
                 }`
               }
             >
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
           {webmailUrl && (
@@ -68,12 +70,26 @@ export function Layout() {
         </nav>
         <div className="px-5 py-3 border-t border-slate-700 text-xs">
           <div className="truncate text-slate-400">{user?.email}</div>
+          <label className="mt-2 block text-slate-400">
+            {t('common.language')}
+            <select
+              value={locale}
+              onChange={(e) => setLocale(e.target.value as (typeof LOCALES)[number]['code'])}
+              className="mt-1 block w-full rounded border border-slate-700 bg-slate-800 px-1.5 py-1 text-slate-200"
+            >
+              {LOCALES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             onClick={() => void logout()}
             className="mt-2 text-indigo-300 hover:text-indigo-100"
           >
-            Sign out
+            {t('common.signOut')}
           </button>
         </div>
       </aside>
