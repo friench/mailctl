@@ -62,6 +62,9 @@ export class MailApiClient {
   patch(path: string, body?: unknown): Promise<unknown> {
     return this.request('PATCH', path, body);
   }
+  put(path: string, body?: unknown): Promise<unknown> {
+    return this.request('PUT', path, body);
+  }
   delete(path: string): Promise<unknown> {
     return this.request('DELETE', path);
   }

@@ -611,6 +611,242 @@ register(
   ({ id }) => client.delete(`/admin/api/suppressions/${seg(id)}`),
 );
 
+// ---- domains (extended) ----
+register(
+  'get_domain',
+  { title: 'Get domain', description: 'Get a domain by id (GET /admin/api/domains/:id).', readOnly: true },
+  { id: z.string() },
+  ({ id }) => client.get(`/admin/api/domains/${seg(id)}`),
+);
+
+register(
+  'update_domain',
+  { title: 'Update domain', description: 'Update a domain (active flag, DKIM selector, notes).' },
+  {
+    id: z.string(),
+    active: z.boolean().optional(),
+    dkimSelector: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+  },
+  ({ id, ...body }) => client.patch(`/admin/api/domains/${seg(id)}`, body),
+);
+
+register(
+  'delete_domain',
+  { title: 'Delete domain', description: 'Delete a domain from DMS + DB.', destructive: true },
+  { id: z.string() },
+  ({ id }) => client.delete(`/admin/api/domains/${seg(id)}`),
+);
+
+// ---- mailboxes (extended) ----
+register(
+  'get_mailbox',
+  { title: 'Get mailbox', description: 'Get a mailbox by id.', readOnly: true },
+  { id: z.string() },
+  ({ id }) => client.get(`/admin/api/mailboxes/${seg(id)}`),
+);
+
+register(
+  'update_mailbox',
+  {
+    title: 'Update mailbox',
+    description: 'Update quota / active / send-blocked / receive-blocked / notes.',
+  },
+  {
+    id: z.string(),
+    quotaMb: z.number().int().nullable().optional(),
+    active: z.boolean().optional(),
+    sendBlocked: z.boolean().optional(),
+    receiveBlocked: z.boolean().optional(),
+    notes: z.string().nullable().optional(),
+  },
+  ({ id, ...body }) => client.patch(`/admin/api/mailboxes/${seg(id)}`, body),
+);
+
+register(
+  'get_mailbox_sieve',
+  {
+    title: 'Get mailbox filters',
+    description: 'Get a mailbox Sieve config (vacation + filter rules).',
+    readOnly: true,
+  },
+  { id: z.string() },
+  ({ id }) => client.get(`/admin/api/mailboxes/${seg(id)}/sieve`),
+);
+
+register(
+  'set_mailbox_sieve',
+  {
+    title: 'Set mailbox filters',
+    description: 'Replace a mailbox Sieve config (vacation autoresponder + filter rules).',
+  },
+  {
+    id: z.string(),
+    vacation: z.object({
+      enabled: z.boolean(),
+      subject: z.string().optional(),
+      message: z.string().optional(),
+      days: z.number().int().optional(),
+    }),
+    rules: z.array(
+      z.object({
+        field: z.enum(['from', 'to', 'subject']),
+        contains: z.string(),
+        action: z.enum(['fileinto', 'redirect', 'discard']),
+        arg: z.string().optional(),
+      }),
+    ),
+  },
+  ({ id, ...body }) => client.put(`/admin/api/mailboxes/${seg(id)}/sieve`, body),
+);
+
+// ---- spam quarantine ----
+register(
+  'list_quarantine',
+  {
+    title: 'List quarantine',
+    description:
+      'List spam quarantined in mailboxes Junk folders. Pass mailboxId to scope to one mailbox.',
+    readOnly: true,
+  },
+  { mailboxId: z.string().optional() },
+  ({ mailboxId }) =>
+    client.get(`/admin/api/quarantine${mailboxId ? `?mailboxId=${seg(mailboxId)}` : ''}`),
+);
+
+register(
+  'release_quarantine',
+  { title: 'Release quarantine', description: 'Move a quarantined message back to the inbox.' },
+  { mailboxId: z.string(), uid: z.number().int() },
+  ({ mailboxId, uid }) =>
+    client.post(`/admin/api/quarantine/${seg(mailboxId)}/${uid}/release`),
+);
+
+register(
+  'delete_quarantine',
+  { title: 'Delete quarantine', description: 'Permanently delete a quarantined message.', destructive: true },
+  { mailboxId: z.string(), uid: z.number().int() },
+  ({ mailboxId, uid }) => client.delete(`/admin/api/quarantine/${seg(mailboxId)}/${uid}`),
+);
+
+// ---- users ----
+register(
+  'list_users',
+  { title: 'List users', description: 'List dashboard users (GET /admin/api/users).', readOnly: true },
+  {},
+  () => client.get('/admin/api/users'),
+);
+
+register(
+  'create_user',
+  { title: 'Create user', description: 'Create a dashboard user with a role.' },
+  {
+    email: z.string(),
+    password: z.string(),
+    role: z
+      .enum(['admin', 'read_only', 'domain_admin', 'domain_read_only', 'domain_user'])
+      .optional(),
+  },
+  (body) => client.post('/admin/api/users', body),
+);
+
+register(
+  'set_user_role',
+  { title: 'Set user role', description: 'Update a user role and/or assigned domains.' },
+  {
+    id: z.string(),
+    role: z
+      .enum(['admin', 'read_only', 'domain_admin', 'domain_read_only', 'domain_user'])
+      .optional(),
+    domainIds: z.array(z.string()).optional(),
+  },
+  ({ id, ...body }) => client.patch(`/admin/api/users/${seg(id)}`, body),
+);
+
+register(
+  'delete_user',
+  { title: 'Delete user', description: 'Delete a dashboard user.', destructive: true },
+  { id: z.string() },
+  ({ id }) => client.delete(`/admin/api/users/${seg(id)}`),
+);
+
+// ---- SMTP accounts / API keys / webhooks (extended) ----
+register(
+  'update_smtp_account',
+  { title: 'Update SMTP account', description: 'Update fields of an SMTP account (partial).' },
+  {
+    id: z.string(),
+    name: z.string().optional(),
+    host: z.string().optional(),
+    port: z.number().int().optional(),
+    secure: z.boolean().optional(),
+    priority: z.number().int().optional(),
+    fromAddress: z.string().optional(),
+    fromName: z.string().nullable().optional(),
+  },
+  ({ id, ...body }) => client.patch(`/admin/api/smtp-accounts/${seg(id)}`, body),
+);
+
+register(
+  'set_api_key_policy',
+  {
+    title: 'Set API key policy',
+    description: 'Toggle a key per-key send policy (suppressionExempt bypasses the suppression list).',
+  },
+  { id: z.string(), suppressionExempt: z.boolean() },
+  ({ id, ...body }) => client.patch(`/admin/api/api-keys/${seg(id)}`, body),
+);
+
+register(
+  'update_webhook',
+  { title: 'Update webhook', description: 'Update a webhook (name, url, events, active).' },
+  {
+    id: z.string(),
+    name: z.string().optional(),
+    url: z.string().optional(),
+    events: z.array(z.string()).optional(),
+    active: z.boolean().optional(),
+  },
+  ({ id, ...body }) => client.patch(`/admin/api/webhooks/${seg(id)}`, body),
+);
+
+register(
+  'list_webhook_deliveries',
+  {
+    title: 'List webhook deliveries',
+    description: 'Recent delivery attempts for a webhook.',
+    readOnly: true,
+  },
+  { id: z.string() },
+  ({ id }) => client.get(`/admin/api/webhooks/${seg(id)}/deliveries`),
+);
+
+// ---- backups / stats ----
+register(
+  'list_backups',
+  { title: 'List backups', description: 'List DB backups (GET /admin/api/backups).', readOnly: true },
+  {},
+  () => client.get('/admin/api/backups'),
+);
+
+register(
+  'create_backup',
+  { title: 'Create backup', description: 'Trigger an online backup of the panel database.' },
+  {},
+  () => client.post('/admin/api/backups', {}),
+);
+
+register(
+  'get_stats',
+  {
+    title: 'Get stats',
+    description: 'Dashboard counters + send-queue stats (GET /admin/api/stats).',
+    readOnly: true,
+  },
+  {},
+  () => client.get('/admin/api/stats'),
+);
+
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);

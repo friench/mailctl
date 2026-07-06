@@ -61,15 +61,25 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-## Tools (29)
+## Tools (70)
 
 - **Send:** `send_email`, `get_send_job`, `list_send_jobs`
-- **Domains:** `list_domains`, `create_domain`, `generate_dkim`, `dns_check`
-- **Mailboxes:** `list_mailboxes`, `create_mailbox`, `set_mailbox_password`, `delete_mailbox`
+- **Domains:** `list_domains`, `get_domain`, `create_domain`, `update_domain`, `delete_domain`, `generate_dkim`, `dns_check`
+- **Mailboxes:** `list_mailboxes`, `get_mailbox`, `create_mailbox`, `update_mailbox`, `set_mailbox_password`, `delete_mailbox`, `get_mailbox_sieve`, `set_mailbox_sieve`
 - **Aliases:** `list_aliases`, `create_alias`, `delete_alias`
-- **SMTP accounts:** `list_smtp_accounts`, `create_smtp_account`, `delete_smtp_account`
-- **API keys:** `list_api_keys`, `create_api_key`, `revoke_api_key`
-- **Webhooks:** `list_webhooks`, `create_webhook`, `test_webhook`, `delete_webhook`
+- **Quarantine:** `list_quarantine`, `release_quarantine`, `delete_quarantine`
+- **Suppression:** `list_suppressions`, `add_suppression`, `remove_suppression`
+- **Bounces:** `list_bounces`, `ingest_bounce`
+- **Access lists:** `list_access_rules`, `create_access_rule`, `delete_access_rule`
+- **SMTP accounts:** `list_smtp_accounts`, `create_smtp_account`, `update_smtp_account`, `delete_smtp_account`
+- **API keys:** `list_api_keys`, `create_api_key`, `set_api_key_policy`, `revoke_api_key`
+- **Webhooks:** `list_webhooks`, `create_webhook`, `update_webhook`, `test_webhook`, `list_webhook_deliveries`, `delete_webhook`
+- **Users:** `list_users`, `create_user`, `set_user_role`, `delete_user`
+- **Provisioning:** `import_bulk`
+- **Migrations:** `list_migrations`, `get_migration`, `create_migration`
+- **Fetchmail:** `list_fetchmail`, `create_fetchmail`, `delete_fetchmail`
+- **Observability:** `get_engine_overview`, `restart_container`, `get_mail_logs`, `get_mail_queue`, `get_sessions`, `get_stats`
+- **Backups:** `list_backups`, `create_backup`
 - **Feature flags:** `list_feature_flags`, `set_feature_flag`
 - **DMS↔DB sync:** `sync_preview`, `sync_status`, `sync_apply`
 
