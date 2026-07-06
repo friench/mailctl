@@ -33,6 +33,8 @@ import { MigrationWorker } from './workers/migration-worker';
 import { FetchmailRepository } from './domain/fetchmail/repository';
 import { FetchmailService } from './domain/fetchmail/service';
 import { ImportService } from './domain/import/service';
+import { HttpOidcProvider, DisabledOidcProvider } from './domain/auth/oidc-provider';
+import type { OidcRouteOptions } from './http/routes/auth';
 import { makeSecretBox } from './lib/secret-box';
 import { AliasService } from './domain/aliases/service';
 import { SyncService } from './domain/sync/service';
@@ -212,6 +214,35 @@ const importService = new ImportService(
   logger,
 );
 
+const oidcConfigured =
+  env.OIDC_ISSUER && env.OIDC_CLIENT_ID && env.OIDC_CLIENT_SECRET && env.OIDC_REDIRECT_URI;
+const oidcOptions: OidcRouteOptions = {
+  provider: oidcConfigured
+    ? new HttpOidcProvider(
+        {
+          issuer: env.OIDC_ISSUER!,
+          clientId: env.OIDC_CLIENT_ID!,
+          clientSecret: env.OIDC_CLIENT_SECRET!,
+          redirectUri: env.OIDC_REDIRECT_URI!,
+          scopes: env.OIDC_SCOPES,
+          label: env.OIDC_BUTTON_LABEL,
+        },
+        globalThis.fetch,
+        logger,
+      )
+    : new DisabledOidcProvider(),
+  provision: {
+    autoProvision: env.OIDC_AUTO_PROVISION,
+    defaultRole: env.OIDC_DEFAULT_ROLE,
+    adminEmails: (env.OIDC_ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  },
+  requireVerifiedEmail: env.OIDC_REQUIRE_VERIFIED_EMAIL,
+};
+if (oidcConfigured) logger.info('OIDC/SSO login enabled');
+
 const sendJobRepo = new SendJobRepository(dbClient.db);
 const sendJobService = new SendJobService(sendJobRepo, mailer, logger, webhookService);
 sendJobService.recoverStuckJobs();
@@ -314,6 +345,7 @@ const app = createServer({
   sendJobService,
   userRepo,
   userService,
+  oidc: oidcOptions,
   webhookService,
   featureFlagService,
   backupService,

@@ -1,7 +1,15 @@
 import argon2 from 'argon2';
+import { randomBytes } from 'node:crypto';
 import { BusinessError } from '../../lib/errors';
 import type { UserRole, UserRow } from '../../db/schema';
 import type { UserRepository } from './repository';
+
+export interface OidcProvisionOptions {
+  autoProvision: boolean;
+  defaultRole: UserRole;
+  /** Emails granted the `admin` role on first SSO login. */
+  adminEmails: string[];
+}
 
 const ARGON2_OPTIONS: argon2.Options = {
   type: argon2.argon2id,
@@ -54,6 +62,24 @@ export class UserService {
   setDomains(id: string, domainIds: string[]): void {
     if (!this.repo.findById(id)) throw new BusinessError(404, 'User not found');
     this.repo.setDomains(id, domainIds);
+  }
+
+  /**
+   * Resolve a user for an SSO (OIDC) login by email. Existing users are returned
+   * as-is (keeping their role); unknown users are auto-provisioned when enabled
+   * (with an unusable password, so password login stays disabled) or rejected
+   * with null. Emails in `adminEmails` are provisioned as `admin`.
+   */
+  async findOrProvisionOidc(email: string, opts: OidcProvisionOptions): Promise<UserRow | null> {
+    const normalized = email.toLowerCase();
+    const existing = this.repo.findByEmail(normalized);
+    if (existing) return existing;
+    if (!opts.autoProvision) return null;
+
+    const role: UserRole = opts.adminEmails.includes(normalized) ? 'admin' : opts.defaultRole;
+    // Random unusable password — SSO users authenticate only via the IdP.
+    const passwordHash = await argon2.hash(randomBytes(32).toString('hex'), ARGON2_OPTIONS);
+    return this.repo.create({ email: normalized, passwordHash, role });
   }
 
   async verifyPassword(email: string, password: string): Promise<UserRow | null> {

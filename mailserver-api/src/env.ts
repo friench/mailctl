@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { USER_ROLES } from './db/schema';
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -73,6 +74,22 @@ const envSchema = z.object({
   ENGINE_CONTAINERS: z.string().optional(),
   /** Path (inside the DMS container) of the mail log tailed by the ops views. */
   MAIL_LOG_PATH: z.string().default('/var/log/mail/mail.log'),
+
+  // OpenID Connect / SSO login. Enabled when issuer+client+secret+redirect are all set.
+  OIDC_ISSUER: z.string().optional(),
+  OIDC_CLIENT_ID: z.string().optional(),
+  OIDC_CLIENT_SECRET: z.string().optional(),
+  OIDC_REDIRECT_URI: z.string().optional(),
+  OIDC_SCOPES: z.string().default('openid email profile'),
+  OIDC_BUTTON_LABEL: z.string().default('Sign in with SSO'),
+  /** Auto-create a local user on first successful SSO login. */
+  OIDC_AUTO_PROVISION: z.coerce.boolean().default(false),
+  /** Role for auto-provisioned SSO users. */
+  OIDC_DEFAULT_ROLE: z.enum(USER_ROLES).default('read_only'),
+  /** Comma-separated emails granted `admin` on first SSO login. */
+  OIDC_ADMIN_EMAILS: z.string().optional(),
+  /** Require the IdP to report the email as verified. */
+  OIDC_REQUIRE_VERIFIED_EMAIL: z.coerce.boolean().default(true),
   /** When `quarantine_retention_enabled`, expunge Junk messages older than this many days. */
   QUARANTINE_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
 
