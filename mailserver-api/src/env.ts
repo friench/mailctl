@@ -10,6 +10,8 @@ const envSchema = z.object({
 
   DMS_CONTAINER_NAME: z.string().default('mailserver'),
   DOCKER_SOCKET_PATH: z.string().default('/var/run/docker.sock'),
+  /** When set (e.g. tcp://docker-socket-proxy:2375), connect via the proxy instead of the socket. */
+  DOCKER_HOST: z.string().optional(),
 
   /** Public IMAP/SMTP FQDN (e.g. mail.example.com). Enables mail-client autoconfig. */
   MAIL_HOSTNAME: z.string().optional(),

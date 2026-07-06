@@ -118,5 +118,6 @@ docker exec -it mailserver setup config dkim domain example.com
 | `DATABASE_URL` | `./data/data.db` | SQLite file (WAL mode) |
 | `NGINX_CONTAINER_NAME` / `NGINX_GENERATED_DIR` / `NGINX_RELOAD_ENABLED` | `nginx` / `./data/nginx-generated` / `true` | Phase 8 vhost generation |
 | `DMS_CONTAINER_NAME` / `DOCKER_SOCKET_PATH` | `mailserver` / `/var/run/docker.sock` | Mailbox provisioning via `docker exec` |
+| `DOCKER_HOST` | (unset) | When set (e.g. `tcp://docker-socket-proxy:2375`) all dockerode clients connect via the proxy instead of the raw socket. `lib/docker.ts` resolves the connection; the default compose wires a least-privilege `tecnativa/docker-socket-proxy`. |
 | `TRUST_PROXY` | `0` | Set to `1` when behind nginx so `req.ip` is correct |
 | `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` | (optional) | Bootstrap first admin if `users` table is empty |

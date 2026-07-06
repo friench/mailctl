@@ -30,7 +30,7 @@ export interface EngineClient {
 }
 
 export interface DockerodeEngineClientOptions {
-  socketPath?: string;
+  dockerOptions?: Docker.DockerOptions;
   /** The docker-mailserver container to exec engine commands in. */
   dmsContainerName: string;
   logger?: Logger;
@@ -42,7 +42,7 @@ export class DockerodeEngineClient implements EngineClient {
   private readonly logger: Logger | undefined;
 
   constructor(opts: DockerodeEngineClientOptions) {
-    this.docker = new Docker({ socketPath: opts.socketPath ?? '/var/run/docker.sock' });
+    this.docker = new Docker(opts.dockerOptions ?? { socketPath: '/var/run/docker.sock' });
     this.dmsContainerName = opts.dmsContainerName;
     this.logger = opts.logger;
   }

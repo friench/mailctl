@@ -40,6 +40,7 @@ import { SuppressionService } from './domain/suppressions/service';
 import { HttpOidcProvider, DisabledOidcProvider } from './domain/auth/oidc-provider';
 import type { OidcRouteOptions } from './http/routes/auth';
 import { makeSecretBox } from './lib/secret-box';
+import { resolveDockerOptions } from './lib/docker';
 import { AliasService } from './domain/aliases/service';
 import { SyncService } from './domain/sync/service';
 import { SendJobRepository } from './domain/queue/repository';
@@ -68,6 +69,10 @@ import { createServer } from './server';
 const env = loadEnv();
 const logger = createLogger(env);
 
+// One dockerode connection for every client: the raw socket, or a
+// docker-socket-proxy over TCP when DOCKER_HOST is set (recommended for prod).
+const dockerOptions = resolveDockerOptions(env);
+
 const dbClient = createDb(env.DATABASE_URL);
 migrateDatabase(dbClient.sqlite, { logger });
 logger.info({ databaseUrl: env.DATABASE_URL }, 'Database initialized');
@@ -94,7 +99,7 @@ if (mailer.accountCount === 0) {
 const smtpAccountService = new SmtpAccountService(smtpAccountRepo, smtpAccountLoader, mailer);
 
 const dmsClient = new DockerodeDmsClient({
-  socketPath: env.DOCKER_SOCKET_PATH,
+  dockerOptions,
   containerName: env.DMS_CONTAINER_NAME,
   logger,
   spamMailbox: env.SPAM_MAILBOX,
@@ -146,7 +151,7 @@ const engineContainers = env.ENGINE_CONTAINERS
   : [env.DMS_CONTAINER_NAME, env.NGINX_CONTAINER_NAME, 'mail-api'];
 const engineService = new EngineService(
   new DockerodeEngineClient({
-    socketPath: env.DOCKER_SOCKET_PATH,
+    dockerOptions,
     dmsContainerName: env.DMS_CONTAINER_NAME,
     logger,
   }),
@@ -155,7 +160,7 @@ const engineService = new EngineService(
 
 const opsService = new OpsService(
   new DockerodeOpsClient({
-    socketPath: env.DOCKER_SOCKET_PATH,
+    dockerOptions,
     dmsContainerName: env.DMS_CONTAINER_NAME,
     mailLogPath: env.MAIL_LOG_PATH,
     logger,
@@ -167,7 +172,7 @@ const secretBox = makeSecretBox(env.SESSION_SECRET);
 const migrationService = new MigrationService(
   new MigrationJobRepository(dbClient.db),
   new DoveadmMigrator({
-    socketPath: env.DOCKER_SOCKET_PATH,
+    dockerOptions,
     dmsContainerName: env.DMS_CONTAINER_NAME,
     logger,
   }),
@@ -188,7 +193,7 @@ const syncService = new SyncService(dmsClient, domainRepo, mailboxRepo, aliasRep
 
 const nginxReloader = env.NGINX_RELOAD_ENABLED
   ? new DockerodeNginxReloader({
-      socketPath: env.DOCKER_SOCKET_PATH,
+      dockerOptions,
       containerName: env.NGINX_CONTAINER_NAME,
       logger,
     })
