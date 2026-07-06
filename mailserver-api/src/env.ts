@@ -85,13 +85,19 @@ const envSchema = z.object({
   OIDC_SCOPES: z.string().default('openid email profile'),
   OIDC_BUTTON_LABEL: z.string().default('Sign in with SSO'),
   /** Auto-create a local user on first successful SSO login. */
-  OIDC_AUTO_PROVISION: z.coerce.boolean().default(false),
+  OIDC_AUTO_PROVISION: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   /** Role for auto-provisioned SSO users. */
   OIDC_DEFAULT_ROLE: z.enum(USER_ROLES).default('read_only'),
   /** Comma-separated emails granted `admin` on first SSO login. */
   OIDC_ADMIN_EMAILS: z.string().optional(),
   /** Require the IdP to report the email as verified. */
-  OIDC_REQUIRE_VERIFIED_EMAIL: z.coerce.boolean().default(true),
+  OIDC_REQUIRE_VERIFIED_EMAIL: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
   /** When `quarantine_retention_enabled`, expunge Junk messages older than this many days. */
   QUARANTINE_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
 
