@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import type { SendJobDTO as Job } from '@contracts';
+import { useT } from '../i18n';
 
 export function SendLogPage() {
+  const t = useT();
   const [filter, setFilter] = useState<'all' | 'pending' | 'done' | 'dead'>('all');
   const jobs = useQuery({
     queryKey: ['jobs', 'all'],
@@ -22,38 +24,38 @@ export function SendLogPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold text-slate-900">Send log</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">{t('sendLog.title')}</h1>
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as 'all' | 'pending' | 'done' | 'dead')}
           className="border border-slate-300 rounded px-2 py-1 text-sm"
         >
-          <option value="all">All</option>
-          <option value="pending">Pending / processing</option>
-          <option value="done">Done</option>
-          <option value="dead">Dead</option>
+          <option value="all">{t('sendLog.filterAll')}</option>
+          <option value="pending">{t('sendLog.filterPending')}</option>
+          <option value="done">{t('sendLog.filterDone')}</option>
+          <option value="dead">{t('sendLog.filterDead')}</option>
         </select>
       </div>
 
       <div className="bg-white rounded shadow overflow-hidden">
-        {jobs.isLoading && <div className="p-4 text-slate-500">Loading…</div>}
+        {jobs.isLoading && <div className="p-4 text-slate-500">{t('common.loading')}</div>}
         {jobs.data && (
           <table className="w-full text-sm">
             <thead className="bg-slate-100 text-slate-700">
               <tr>
-                <th className="text-left px-4 py-2 font-medium">To</th>
-                <th className="text-left px-4 py-2 font-medium">Subject</th>
-                <th className="text-left px-4 py-2 font-medium">Status</th>
-                <th className="text-left px-4 py-2 font-medium">Attempts</th>
-                <th className="text-left px-4 py-2 font-medium">Account</th>
-                <th className="text-left px-4 py-2 font-medium">Created</th>
+                <th className="text-left px-4 py-2 font-medium">{t('sendLog.colTo')}</th>
+                <th className="text-left px-4 py-2 font-medium">{t('sendLog.colSubject')}</th>
+                <th className="text-left px-4 py-2 font-medium">{t('sendLog.colStatus')}</th>
+                <th className="text-left px-4 py-2 font-medium">{t('sendLog.colAttempts')}</th>
+                <th className="text-left px-4 py-2 font-medium">{t('sendLog.colAccount')}</th>
+                <th className="text-left px-4 py-2 font-medium">{t('common.created')}</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
-                    No jobs.
+                    {t('sendLog.noJobs')}
                   </td>
                 </tr>
               )}

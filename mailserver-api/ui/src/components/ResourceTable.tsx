@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../api';
+import { useT } from '../i18n';
 
 export interface Column<T> {
   key: string;
@@ -33,6 +34,7 @@ export interface ResourceTableProps<T extends { id: string }> {
 }
 
 export function ResourceTable<T extends { id: string }>(props: ResourceTableProps<T>) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [createResult, setCreateResult] = useState<unknown>(null);
@@ -57,7 +59,7 @@ export function ResourceTable<T extends { id: string }>(props: ResourceTableProp
       }
     },
     onError: (err) => {
-      setCreateError(err instanceof Error ? err.message : 'Create failed');
+      setCreateError(err instanceof Error ? err.message : t('resourceTable.createFailed'));
     },
   });
 
@@ -82,7 +84,7 @@ export function ResourceTable<T extends { id: string }>(props: ResourceTableProp
             }}
             className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700"
           >
-            {showCreate ? 'Cancel' : 'New'}
+            {showCreate ? t('common.cancel') : t('resourceTable.new')}
           </button>
         )}
       </div>
@@ -100,7 +102,7 @@ export function ResourceTable<T extends { id: string }>(props: ResourceTableProp
                 }}
                 className="mt-3 text-sm text-indigo-600 hover:underline"
               >
-                Done
+                {t('resourceTable.done')}
               </button>
             </div>
           ) : (
@@ -115,9 +117,11 @@ export function ResourceTable<T extends { id: string }>(props: ResourceTableProp
       )}
 
       <div className="bg-white rounded shadow overflow-hidden">
-        {list.isLoading && <div className="p-4 text-slate-500">Loading…</div>}
+        {list.isLoading && <div className="p-4 text-slate-500">{t('common.loading')}</div>}
         {list.isError && (
-          <div className="p-4 text-red-700">Failed to load: {(list.error as Error).message}</div>
+          <div className="p-4 text-red-700">
+            {t('resourceTable.failedToLoad')} {(list.error as Error).message}
+          </div>
         )}
         {list.data && (
           <table className="w-full text-sm">
@@ -129,7 +133,7 @@ export function ResourceTable<T extends { id: string }>(props: ResourceTableProp
                   </th>
                 ))}
                 {(props.canDelete !== false || props.rowActions) && (
-                  <th className="text-right px-4 py-2 font-medium">Actions</th>
+                  <th className="text-right px-4 py-2 font-medium">{t('common.actions')}</th>
                 )}
               </tr>
             </thead>
@@ -140,7 +144,7 @@ export function ResourceTable<T extends { id: string }>(props: ResourceTableProp
                     colSpan={props.columns.length + 1}
                     className="px-4 py-6 text-center text-slate-500"
                   >
-                    No records.
+                    {t('resourceTable.noRecords')}
                   </td>
                 </tr>
               )}
@@ -158,11 +162,12 @@ export function ResourceTable<T extends { id: string }>(props: ResourceTableProp
                         <button
                           type="button"
                           onClick={() => {
-                            if (confirm('Delete this record?')) deleteMutation.mutate(row.id);
+                            if (confirm(t('resourceTable.confirmDelete')))
+                              deleteMutation.mutate(row.id);
                           }}
                           className="text-red-600 hover:underline text-xs"
                         >
-                          Delete
+                          {t('common.delete')}
                         </button>
                       )}
                     </td>
@@ -185,6 +190,7 @@ interface CreateFormProps {
 }
 
 function CreateForm({ fields, error, submitting, onSubmit }: CreateFormProps) {
+  const t = useT();
   const [values, setValues] = useState<Record<string, unknown>>(() => {
     const initial: Record<string, unknown> = {};
     for (const f of fields) {
@@ -242,7 +248,7 @@ function CreateForm({ fields, error, submitting, onSubmit }: CreateFormProps) {
         disabled={submitting}
         className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 disabled:opacity-50"
       >
-        {submitting ? 'Creating…' : 'Create'}
+        {submitting ? t('resourceTable.creating') : t('common.create')}
       </button>
     </form>
   );

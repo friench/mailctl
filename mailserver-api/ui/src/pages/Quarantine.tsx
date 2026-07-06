@@ -3,8 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MailboxDTO, QuarantineBoxDTO } from '@contracts';
 import { api } from '../api';
 import { QuarantineMessages } from '../components/QuarantineMessages';
+import { useT } from '../i18n';
 
 export function QuarantinePage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [mailboxId, setMailboxId] = useState('');
   const [status, setStatus] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
@@ -42,10 +44,13 @@ export function QuarantinePage() {
         : api.delete(`/admin/api/quarantine/${mid}/${uid}`),
     onSuccess: (_d, v) => {
       invalidate();
-      setStatus({ kind: 'ok', text: v.action === 'release' ? 'Released' : 'Deleted' });
+      setStatus({
+        kind: 'ok',
+        text: v.action === 'release' ? t('quarantine.released') : t('quarantine.deleted'),
+      });
     },
     onError: (err) =>
-      setStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Failed' }),
+      setStatus({ kind: 'error', text: err instanceof Error ? err.message : t('common.failed') }),
   });
 
   const bulk = useMutation({
@@ -62,11 +67,11 @@ export function QuarantinePage() {
       invalidate();
       setStatus({
         kind: 'ok',
-        text: `${v.action === 'release' ? 'Released' : 'Deleted'} ${res.handled}`,
+        text: `${v.action === 'release' ? t('quarantine.released') : t('quarantine.deleted')} ${res.handled}`,
       });
     },
     onError: (err) =>
-      setStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Failed' }),
+      setStatus({ kind: 'error', text: err instanceof Error ? err.message : t('common.failed') }),
   });
 
   const data = boxes.data ?? [];
@@ -75,16 +80,16 @@ export function QuarantinePage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Spam quarantine</h1>
+        <h1 className="text-xl font-semibold text-slate-900">{t('quarantine.title')}</h1>
         <div className="flex items-center gap-3 text-sm">
           <label className="text-xs text-slate-600">
-            Mailbox
+            {t('quarantine.mailbox')}
             <select
               value={mailboxId}
               onChange={(e) => setMailboxId(e.target.value)}
               className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
             >
-              <option value="">All (with spam)</option>
+              <option value="">{t('quarantine.allWithSpam')}</option>
               {(mailboxes.data ?? []).map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.address}
@@ -97,24 +102,21 @@ export function QuarantinePage() {
             onClick={() => boxes.refetch()}
             className="text-indigo-600 hover:underline text-xs"
           >
-            Refresh
+            {t('common.refresh')}
           </button>
         </div>
       </div>
 
-      <p className="text-xs text-slate-500">
-        Spam filed into each mailbox&apos;s Junk folder. Release moves a message back to the inbox;
-        delete expunges it permanently.
-      </p>
+      <p className="text-xs text-slate-500">{t('quarantine.description')}</p>
       {status && (
         <p className={`text-xs ${status.kind === 'ok' ? 'text-green-700' : 'text-red-700'}`}>
           {status.text}
         </p>
       )}
 
-      {boxes.isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {boxes.isLoading && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
       {!boxes.isLoading && data.length === 0 && (
-        <p className="text-sm text-slate-500">No quarantined spam.</p>
+        <p className="text-sm text-slate-500">{t('quarantine.noSpam')}</p>
       )}
 
       {data.map((box) => (
@@ -122,7 +124,10 @@ export function QuarantinePage() {
           <h2 className="mb-2 font-mono text-sm font-semibold text-slate-900">
             {box.address}
             <span className="ml-2 font-sans text-xs font-normal text-slate-500">
-              {box.messages.length} message{box.messages.length === 1 ? '' : 's'}
+              {box.messages.length}{' '}
+              {box.messages.length === 1
+                ? t('quarantine.messageSingular')
+                : t('quarantine.messagePlural')}
             </span>
           </h2>
           <QuarantineMessages

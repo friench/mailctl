@@ -3,34 +3,61 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ResourceTable, formatBoolean, shortDate } from '../components/ResourceTable';
 import { api } from '../api';
 import type { SmtpAccountDTO as SmtpAccount } from '@contracts';
+import { useT } from '../i18n';
 
 export function SmtpAccountsPage() {
+  const t = useT();
   return (
     <ResourceTable<SmtpAccount>
-      title="SMTP accounts"
+      title={t('smtpAccounts.title')}
       endpoint="/admin/api/smtp-accounts"
       queryKey={['smtp-accounts']}
       columns={[
-        { key: 'name', header: 'Name', render: (r) => r.name },
-        { key: 'host', header: 'Host', render: (r) => `${r.host}:${r.port}` },
-        { key: 'from', header: 'From', render: (r) => r.fromAddress },
-        { key: 'priority', header: 'Priority', render: (r) => r.priority },
-        { key: 'secure', header: 'TLS', render: (r) => formatBoolean(r.secure) },
-        { key: 'active', header: 'Active', render: (r) => formatBoolean(r.active) },
-        { key: 'created', header: 'Created', render: (r) => shortDate(r.createdAt) },
+        { key: 'name', header: t('smtpAccounts.colName'), render: (r) => r.name },
+        { key: 'host', header: t('smtpAccounts.colHost'), render: (r) => `${r.host}:${r.port}` },
+        { key: 'from', header: t('smtpAccounts.colFrom'), render: (r) => r.fromAddress },
+        { key: 'priority', header: t('smtpAccounts.colPriority'), render: (r) => r.priority },
+        { key: 'secure', header: t('smtpAccounts.colTls'), render: (r) => formatBoolean(r.secure) },
+        {
+          key: 'active',
+          header: t('smtpAccounts.colActive'),
+          render: (r) => formatBoolean(r.active),
+        },
+        { key: 'created', header: t('common.created'), render: (r) => shortDate(r.createdAt) },
       ]}
       createFields={[
-        { name: 'name', label: 'Name', required: true, placeholder: 'primary' },
-        { name: 'host', label: 'Host', required: true, placeholder: 'mailserver' },
-        { name: 'port', label: 'Port', required: true, type: 'number', defaultValue: 587 },
-        { name: 'secure', label: 'TLS (secure)', type: 'checkbox' },
-        { name: 'fromAddress', label: 'From address', required: true, type: 'email' },
-        { name: 'fromName', label: 'From name (optional)' },
-        { name: 'userEnvVar', label: 'User env var (UPPER_SNAKE)' },
-        { name: 'passwordEnvVar', label: 'Password env var (UPPER_SNAKE)' },
+        {
+          name: 'name',
+          label: t('smtpAccounts.fieldName'),
+          required: true,
+          placeholder: 'primary',
+        },
+        {
+          name: 'host',
+          label: t('smtpAccounts.fieldHost'),
+          required: true,
+          placeholder: 'mailserver',
+        },
+        {
+          name: 'port',
+          label: t('smtpAccounts.fieldPort'),
+          required: true,
+          type: 'number',
+          defaultValue: 587,
+        },
+        { name: 'secure', label: t('smtpAccounts.fieldTls'), type: 'checkbox' },
+        {
+          name: 'fromAddress',
+          label: t('smtpAccounts.fieldFromAddress'),
+          required: true,
+          type: 'email',
+        },
+        { name: 'fromName', label: t('smtpAccounts.fieldFromName') },
+        { name: 'userEnvVar', label: t('smtpAccounts.fieldUserEnvVar') },
+        { name: 'passwordEnvVar', label: t('smtpAccounts.fieldPasswordEnvVar') },
         {
           name: 'priority',
-          label: 'Priority (1 = highest)',
+          label: t('smtpAccounts.fieldPriority'),
           required: true,
           type: 'number',
           defaultValue: 1,
@@ -56,6 +83,7 @@ export function SmtpAccountsPage() {
 }
 
 function SmtpAccountActions({ account }: { account: SmtpAccount }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
@@ -64,23 +92,23 @@ function SmtpAccountActions({ account }: { account: SmtpAccount }) {
       api.patch<SmtpAccount>(`/admin/api/smtp-accounts/${account.id}`, body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['smtp-accounts'] });
-      setMessage({ text: 'Saved', error: false });
+      setMessage({ text: t('smtpAccounts.saved'), error: false });
     },
     onError: (err) => {
-      setMessage({ text: err instanceof Error ? err.message : 'Failed', error: true });
+      setMessage({ text: err instanceof Error ? err.message : t('common.failed'), error: true });
     },
   });
 
   const onEdit = () => {
-    const priorityInput = window.prompt('Priority (1 = highest)', String(account.priority));
+    const priorityInput = window.prompt(t('smtpAccounts.fieldPriority'), String(account.priority));
     if (priorityInput === null) return;
     const priority = Number(priorityInput);
     if (!Number.isFinite(priority)) {
-      setMessage({ text: 'Priority must be a number', error: true });
+      setMessage({ text: t('smtpAccounts.priorityMustBeNumber'), error: true });
       return;
     }
 
-    const fromNameInput = window.prompt('From name (blank to clear)', account.fromName ?? '');
+    const fromNameInput = window.prompt(t('smtpAccounts.promptFromName'), account.fromName ?? '');
     if (fromNameInput === null) return;
     const fromName = fromNameInput.trim();
 
@@ -89,7 +117,7 @@ function SmtpAccountActions({ account }: { account: SmtpAccount }) {
     if (fromName !== (account.fromName ?? '')) body.fromName = fromName;
 
     if (Object.keys(body).length === 0) {
-      setMessage({ text: 'No changes', error: false });
+      setMessage({ text: t('smtpAccounts.noChanges'), error: false });
       return;
     }
     patch.mutate(body);
@@ -103,7 +131,7 @@ function SmtpAccountActions({ account }: { account: SmtpAccount }) {
         disabled={patch.isPending}
         className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
       >
-        {account.active ? 'Disable' : 'Enable'}
+        {account.active ? t('smtpAccounts.disable') : t('smtpAccounts.enable')}
       </button>
       <button
         type="button"
@@ -111,7 +139,7 @@ function SmtpAccountActions({ account }: { account: SmtpAccount }) {
         disabled={patch.isPending}
         className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
       >
-        Edit
+        {t('common.edit')}
       </button>
       {message && (
         <span className={`text-xs ${message.error ? 'text-red-700' : 'text-slate-600'}`}>

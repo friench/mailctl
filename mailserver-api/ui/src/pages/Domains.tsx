@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ResourceTable, formatBoolean, shortDate } from '../components/ResourceTable';
 import { api } from '../api';
 import type { DomainDTO as Domain } from '@contracts';
+import { useT } from '../i18n';
 
 function SourceBadge({ source }: { source: Domain['source'] }) {
   const cls = source === 'dms' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-700';
@@ -10,6 +11,7 @@ function SourceBadge({ source }: { source: Domain['source'] }) {
 }
 
 function ToggleActive({ domain }: { domain: Domain }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const toggle = useMutation({
     mutationFn: () => api.patch(`/admin/api/domains/${domain.id}`, { active: !domain.active }),
@@ -25,21 +27,22 @@ function ToggleActive({ domain }: { domain: Domain }) {
       disabled={toggle.isPending}
       className="text-indigo-600 hover:underline text-xs disabled:opacity-50"
     >
-      {toggle.isPending ? '…' : domain.active ? 'Disable' : 'Enable'}
+      {toggle.isPending ? '…' : domain.active ? t('domains.disable') : t('domains.enable')}
     </button>
   );
 }
 
 export function DomainsPage() {
+  const t = useT();
   return (
     <ResourceTable<Domain>
-      title="Domains"
+      title={t('domains.title')}
       endpoint="/admin/api/domains"
       queryKey={['domains']}
       columns={[
         {
           key: 'name',
-          header: 'Name',
+          header: t('domains.colName'),
           render: (r) => (
             <Link
               to={`/admin/domains/${r.id}`}
@@ -49,33 +52,42 @@ export function DomainsPage() {
             </Link>
           ),
         },
-        { key: 'dkim', header: 'DKIM selector', render: (r) => r.dkimSelector ?? '–' },
+        { key: 'dkim', header: t('domains.dkimSelector'), render: (r) => r.dkimSelector ?? '–' },
         {
           key: 'dkim_status',
-          header: 'DKIM key',
-          render: (r) => (r.dkimPublicKey ? '✓ generated' : '–'),
+          header: t('domains.colDkimKey'),
+          render: (r) => (r.dkimPublicKey ? t('domains.dkimGenerated') : '–'),
         },
-        { key: 'active', header: 'Active', render: (r) => formatBoolean(r.active) },
-        { key: 'source', header: 'Source', render: (r) => <SourceBadge source={r.source} /> },
+        { key: 'active', header: t('domains.colActive'), render: (r) => formatBoolean(r.active) },
+        {
+          key: 'source',
+          header: t('domains.colSource'),
+          render: (r) => <SourceBadge source={r.source} />,
+        },
         {
           key: 'notes',
-          header: 'Notes',
+          header: t('domains.colNotes'),
           render: (r) => <span className="text-slate-500 text-xs">{r.notes ?? '–'}</span>,
         },
-        { key: 'created', header: 'Created', render: (r) => shortDate(r.createdAt) },
+        { key: 'created', header: t('domains.colCreated'), render: (r) => shortDate(r.createdAt) },
       ]}
       rowActions={(r) => (
         <>
           <ToggleActive domain={r} />
           <Link to={`/admin/domains/${r.id}`} className="text-indigo-600 hover:underline text-xs">
-            Details
+            {t('domains.details')}
           </Link>
         </>
       )}
       createFields={[
-        { name: 'name', label: 'Domain name', required: true, placeholder: 'example.com' },
-        { name: 'dkimSelector', label: 'DKIM selector', placeholder: 'mail' },
-        { name: 'notes', label: 'Notes (optional)' },
+        {
+          name: 'name',
+          label: t('domains.fieldDomainName'),
+          required: true,
+          placeholder: 'example.com',
+        },
+        { name: 'dkimSelector', label: t('domains.dkimSelector'), placeholder: 'mail' },
+        { name: 'notes', label: t('domains.fieldNotes') },
       ]}
       transformCreate={(values) => {
         const body: Record<string, unknown> = { name: values.name };

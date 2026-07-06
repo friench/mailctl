@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import type { SieveConfigDTO, SieveRuleDTO } from '@contracts';
 import { api } from '../api';
+import { useT } from '../i18n';
 
 const EMPTY: SieveConfigDTO = {
   vacation: { enabled: false, subject: '', message: '', days: 7 },
@@ -13,6 +14,7 @@ const ACTIONS: SieveRuleDTO['action'][] = ['fileinto', 'redirect', 'discard'];
 
 /** Editor for a mailbox's Sieve config (vacation + filter rules) at `endpoint`. */
 export function SieveEditor({ endpoint, queryKey }: { endpoint: string; queryKey: string[] }) {
+  const t = useT();
   const loaded = useQuery({ queryKey, queryFn: () => api.get<SieveConfigDTO>(endpoint) });
   const [cfg, setCfg] = useState<SieveConfigDTO>(EMPTY);
   const [status, setStatus] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
@@ -23,9 +25,9 @@ export function SieveEditor({ endpoint, queryKey }: { endpoint: string; queryKey
 
   const save = useMutation({
     mutationFn: () => api.put<SieveConfigDTO>(endpoint, cfg),
-    onSuccess: () => setStatus({ kind: 'ok', text: 'Saved' }),
+    onSuccess: () => setStatus({ kind: 'ok', text: t('sieveEditor.saved') }),
     onError: (err) =>
-      setStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Failed' }),
+      setStatus({ kind: 'error', text: err instanceof Error ? err.message : t('common.failed') }),
   });
 
   const setVacation = (v: Partial<SieveConfigDTO['vacation']>) =>
@@ -51,24 +53,24 @@ export function SieveEditor({ endpoint, queryKey }: { endpoint: string; queryKey
             checked={cfg.vacation.enabled}
             onChange={(e) => setVacation({ enabled: e.target.checked })}
           />
-          Vacation / out-of-office auto-reply
+          {t('sieveEditor.vacation')}
         </label>
         {cfg.vacation.enabled && (
           <div className="mt-3 grid gap-2">
             <input
               className={input}
-              placeholder="Subject"
+              placeholder={t('sieveEditor.subjectPlaceholder')}
               value={cfg.vacation.subject}
               onChange={(e) => setVacation({ subject: e.target.value })}
             />
             <textarea
               className={`${input} h-24`}
-              placeholder="Message"
+              placeholder={t('sieveEditor.messagePlaceholder')}
               value={cfg.vacation.message}
               onChange={(e) => setVacation({ message: e.target.value })}
             />
             <label className="text-xs text-slate-600">
-              Repeat interval (days)
+              {t('sieveEditor.repeatInterval')}
               <input
                 type="number"
                 min={1}
@@ -84,20 +86,22 @@ export function SieveEditor({ endpoint, queryKey }: { endpoint: string; queryKey
 
       <section className="rounded border border-slate-200 bg-white p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-900">Filter rules</h3>
+          <h3 className="text-sm font-semibold text-slate-900">{t('sieveEditor.filterRules')}</h3>
           <button
             type="button"
             onClick={addRule}
             className="text-indigo-600 hover:underline text-xs"
           >
-            + Add rule
+            {t('sieveEditor.addRule')}
           </button>
         </div>
-        {cfg.rules.length === 0 && <p className="text-xs text-slate-500">No rules.</p>}
+        {cfg.rules.length === 0 && (
+          <p className="text-xs text-slate-500">{t('sieveEditor.noRules')}</p>
+        )}
         <div className="space-y-2">
           {cfg.rules.map((r, i) => (
             <div key={i} className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-slate-500">If</span>
+              <span className="text-xs text-slate-500">{t('sieveEditor.ifWord')}</span>
               <select
                 className={input}
                 value={r.field}
@@ -107,10 +111,10 @@ export function SieveEditor({ endpoint, queryKey }: { endpoint: string; queryKey
                   <option key={f}>{f}</option>
                 ))}
               </select>
-              <span className="text-xs text-slate-500">contains</span>
+              <span className="text-xs text-slate-500">{t('sieveEditor.containsWord')}</span>
               <input
                 className={input}
-                placeholder="text"
+                placeholder={t('sieveEditor.containsPlaceholder')}
                 value={r.contains}
                 onChange={(e) => setRule(i, { contains: e.target.value })}
               />
@@ -127,7 +131,11 @@ export function SieveEditor({ endpoint, queryKey }: { endpoint: string; queryKey
               {r.action !== 'discard' && (
                 <input
                   className={input}
-                  placeholder={r.action === 'fileinto' ? 'folder' : 'address'}
+                  placeholder={
+                    r.action === 'fileinto'
+                      ? t('sieveEditor.folderPlaceholder')
+                      : t('sieveEditor.addressPlaceholder')
+                  }
                   value={r.arg ?? ''}
                   onChange={(e) => setRule(i, { arg: e.target.value })}
                 />
@@ -137,7 +145,7 @@ export function SieveEditor({ endpoint, queryKey }: { endpoint: string; queryKey
                 onClick={() => removeRule(i)}
                 className="text-red-600 hover:underline text-xs"
               >
-                remove
+                {t('sieveEditor.remove')}
               </button>
             </div>
           ))}
@@ -151,7 +159,7 @@ export function SieveEditor({ endpoint, queryKey }: { endpoint: string; queryKey
           disabled={save.isPending}
           className="rounded bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-500 disabled:opacity-50"
         >
-          {save.isPending ? 'Saving…' : 'Save filters'}
+          {save.isPending ? t('common.saving') : t('sieveEditor.saveFilters')}
         </button>
         {status && (
           <span className={`text-xs ${status.kind === 'ok' ? 'text-green-700' : 'text-red-700'}`}>
