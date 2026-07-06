@@ -25,6 +25,7 @@ const nav: NamespaceModule = {
     featureFlags: 'Feature flags',
     backups: 'Backups',
     users: 'Users',
+    apiSpec: 'API spec',
   },
   ru: {
     dashboard: 'Панель',
@@ -49,6 +50,7 @@ const nav: NamespaceModule = {
     featureFlags: 'Фичефлаги',
     backups: 'Бэкапы',
     users: 'Пользователи',
+    apiSpec: 'API-спека',
   },
 };
 

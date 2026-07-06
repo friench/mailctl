@@ -27,7 +27,8 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "create-api-key": "tsx src/bin/create-api-key.ts",
-    "create-admin": "tsx src/bin/create-admin.ts"
+    "create-admin": "tsx src/bin/create-admin.ts",
+    "openapi:emit": "tsx src/bin/emit-openapi.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1077.0",
