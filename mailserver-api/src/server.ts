@@ -33,6 +33,7 @@ import type { BackupService } from './domain/backups/service';
 import type { StatsService } from './domain/stats/service';
 import type { OidcRouteOptions } from './http/routes/auth';
 import { healthRouter } from './http/routes/health';
+import { openapiRouter } from './http/routes/openapi';
 import { autoconfigRouter } from './http/routes/autoconfig';
 import { metricsRouter } from './http/routes/metrics';
 import { adminStatsRouter } from './http/routes/admin/stats';
@@ -181,6 +182,7 @@ export function createServer(deps: ServerDeps): Express {
   );
 
   app.use(healthRouter(mailer));
+  app.use(openapiRouter());
   app.use(metricsRouter({ token: env.METRICS_TOKEN }));
   app.use(
     autoconfigRouter({

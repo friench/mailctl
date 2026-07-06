@@ -69,6 +69,14 @@ export function Layout() {
               Webmail ↗
             </a>
           )}
+          <a
+            href="/openapi.json"
+            target="_blank"
+            rel="noreferrer"
+            className="block px-5 py-2 text-sm text-slate-300 hover:bg-slate-800"
+          >
+            {t('nav.apiSpec')} ↗
+          </a>
         </nav>
         <div className="px-5 py-3 border-t border-slate-700 text-xs">
           <div className="truncate text-slate-400">{user?.email}</div>
