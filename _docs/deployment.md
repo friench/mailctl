@@ -130,7 +130,7 @@ On Dokploy, keep the generic mail stack domain-agnostic by serving the policy fr
 
 | Concern | Recommendation |
 |---|---|
-| `docker.sock` access | mail-api needs the host docker group to use the mounted socket (`group_add: ["${DOCKER_GID:-983}"]`, already wired in `docker-compose.dokploy.yml`) — without it mailbox/DKIM/sync ops fail with `EACCES`. This grants root-equivalent host access; to harden, mount via `tecnativa/docker-socket-proxy` with whitelist `EXEC=1`, `CONTAINERS=1` and pin to container name `mailserver`/`nginx` instead. |
+| `docker.sock` access | The default `docker-compose.yml` now routes all Docker API calls through a least-privilege **`tecnativa/docker-socket-proxy`** (`CONTAINERS`/`EXEC`/`POST`/`ALLOW_RESTARTS` only; raw socket mounted read-only into the proxy, on an `internal` network). mail-api reaches it via `DOCKER_HOST=tcp://docker-socket-proxy:2375` and no longer mounts the socket — so a mail-api compromise can't drive arbitrary host containers/images. To fall back to the direct socket, unset `DOCKER_HOST` and mount `/var/run/docker.sock` (mail-api then needs the host docker group, `group_add: ["${DOCKER_GID:-983}"]`). |
 | Backups | `sqlite3 mailserver-api/data/data.db ".backup mailserver-api/data/data.db.bak"` daily; copy `docker-data/dms/mail-data/` for actual mail. |
 | Login brute-force | Built-in: 5 logins/min/IP. For higher-quality protection add Cloudflare or Crowdsec. |
 | Trust proxy | mail-api sets `app.set('trust proxy', TRUST_PROXY)` so `req.ip` reflects the real client. Default is `1` in the bundled docker-compose (one nginx hop). |

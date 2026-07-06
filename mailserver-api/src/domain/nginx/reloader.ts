@@ -7,7 +7,7 @@ export interface NginxReloader {
 }
 
 export interface DockerodeNginxReloaderOptions {
-  socketPath?: string;
+  dockerOptions?: Docker.DockerOptions;
   containerName: string;
   logger?: Logger;
 }
@@ -18,7 +18,7 @@ export class DockerodeNginxReloader implements NginxReloader {
   private readonly logger: Logger | undefined;
 
   constructor(opts: DockerodeNginxReloaderOptions) {
-    this.docker = new Docker({ socketPath: opts.socketPath ?? '/var/run/docker.sock' });
+    this.docker = new Docker(opts.dockerOptions ?? { socketPath: '/var/run/docker.sock' });
     this.containerName = opts.containerName;
     this.logger = opts.logger;
   }

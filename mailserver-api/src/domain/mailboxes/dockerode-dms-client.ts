@@ -9,7 +9,8 @@ import { ACCESS_PATHS, type AccessConfigFiles } from '../../lib/access-rules';
 import type { DmsAlias, DmsClient, DmsDkim, DmsEmail, DmsQuota, JunkMessage } from './dms-client';
 
 export interface DockerodeDmsClientOptions {
-  socketPath?: string;
+  /** dockerode connection (unix socket or docker-socket-proxy TCP). */
+  dockerOptions?: Docker.DockerOptions;
   containerName: string;
   logger?: Logger;
   /** IMAP folder spam is filed into by the engine (docker-mailserver default: `Junk`). */
@@ -63,7 +64,7 @@ export class DockerodeDmsClient implements DmsClient {
   private readonly spamMailbox: string;
 
   constructor(opts: DockerodeDmsClientOptions) {
-    this.docker = new Docker({ socketPath: opts.socketPath ?? '/var/run/docker.sock' });
+    this.docker = new Docker(opts.dockerOptions ?? { socketPath: '/var/run/docker.sock' });
     this.containerName = opts.containerName;
     this.logger = opts.logger;
     this.spamMailbox = opts.spamMailbox ?? 'Junk';

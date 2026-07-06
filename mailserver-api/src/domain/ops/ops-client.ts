@@ -17,7 +17,7 @@ export interface OpsClient {
 }
 
 export interface DockerodeOpsClientOptions {
-  socketPath?: string;
+  dockerOptions?: Docker.DockerOptions;
   dmsContainerName: string;
   mailLogPath: string;
   logger?: Logger;
@@ -30,7 +30,7 @@ export class DockerodeOpsClient implements OpsClient {
   private readonly logger: Logger | undefined;
 
   constructor(opts: DockerodeOpsClientOptions) {
-    this.docker = new Docker({ socketPath: opts.socketPath ?? '/var/run/docker.sock' });
+    this.docker = new Docker(opts.dockerOptions ?? { socketPath: '/var/run/docker.sock' });
     this.dmsContainerName = opts.dmsContainerName;
     this.mailLogPath = opts.mailLogPath;
     this.logger = opts.logger;

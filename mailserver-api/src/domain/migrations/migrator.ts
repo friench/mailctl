@@ -24,7 +24,7 @@ export interface Migrator {
 }
 
 export interface DoveadmMigratorOptions {
-  socketPath?: string;
+  dockerOptions?: Docker.DockerOptions;
   dmsContainerName: string;
   logger?: Logger;
 }
@@ -46,7 +46,7 @@ export class DoveadmMigrator implements Migrator {
   private readonly logger: Logger | undefined;
 
   constructor(opts: DoveadmMigratorOptions) {
-    this.docker = new Docker({ socketPath: opts.socketPath ?? '/var/run/docker.sock' });
+    this.docker = new Docker(opts.dockerOptions ?? { socketPath: '/var/run/docker.sock' });
     this.dmsContainerName = opts.dmsContainerName;
     this.logger = opts.logger;
   }
