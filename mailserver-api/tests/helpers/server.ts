@@ -12,6 +12,8 @@ import { StatsService } from '../../src/domain/stats/service';
 import { EngineService } from '../../src/domain/engine/service';
 import { OpsService } from '../../src/domain/ops/service';
 import { ImportService } from '../../src/domain/import/service';
+import { DisabledOidcProvider } from '../../src/domain/auth/oidc-provider';
+import type { OidcRouteOptions } from '../../src/http/routes/auth';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -42,8 +44,20 @@ export const TEST_ENV: Env = {
   SPAM_MAILBOX: 'Junk',
   QUARANTINE_RETENTION_DAYS: 30,
   MAIL_LOG_PATH: '/var/log/mail/mail.log',
+  OIDC_SCOPES: 'openid email profile',
+  OIDC_BUTTON_LABEL: 'Sign in with SSO',
+  OIDC_AUTO_PROVISION: false,
+  OIDC_DEFAULT_ROLE: 'read_only',
+  OIDC_REQUIRE_VERIFIED_EMAIL: true,
   BACKUP_S3_REGION: 'us-east-1',
   BACKUP_S3_PREFIX: 'mailserver/',
+};
+
+/** Default OIDC route options for tests — SSO disabled unless overridden. */
+export const DISABLED_OIDC: OidcRouteOptions = {
+  provider: new DisabledOidcProvider(),
+  provision: { autoProvision: false, defaultRole: 'read_only', adminEmails: [] },
+  requireVerifiedEmail: true,
 };
 
 export interface TestAppHandle {
@@ -54,7 +68,11 @@ export interface TestAppHandle {
   nginxGeneratedDir: string;
 }
 
-export function createTestApp(h: TestDbHandle, env: Env = TEST_ENV): TestAppHandle {
+export function createTestApp(
+  h: TestDbHandle,
+  env: Env = TEST_ENV,
+  oidc: OidcRouteOptions = DISABLED_OIDC,
+): TestAppHandle {
   const logger = createLogger(env);
   const mailer = new MailSender(h.smtpAccountLoader.loadActive(), logger, {
     tlsRejectUnauthorized: env.SMTP_TLS_REJECT_UNAUTHORIZED,
@@ -116,6 +134,7 @@ export function createTestApp(h: TestDbHandle, env: Env = TEST_ENV): TestAppHand
     sendJobService,
     userRepo: h.userRepo,
     userService: h.userService,
+    oidc,
     webhookService: h.webhookService,
     featureFlagService: h.featureFlagService,
     backupService,

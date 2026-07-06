@@ -29,6 +29,7 @@ import type { WebhookService } from './domain/webhooks/service';
 import type { FeatureFlagService } from './domain/feature-flags/service';
 import type { BackupService } from './domain/backups/service';
 import type { StatsService } from './domain/stats/service';
+import type { OidcRouteOptions } from './http/routes/auth';
 import { healthRouter } from './http/routes/health';
 import { autoconfigRouter } from './http/routes/autoconfig';
 import { metricsRouter } from './http/routes/metrics';
@@ -82,6 +83,7 @@ export interface ServerDeps {
   sendJobService: SendJobService;
   userRepo: UserRepository;
   userService: UserService;
+  oidc: OidcRouteOptions;
   webhookService: WebhookService;
   featureFlagService: FeatureFlagService;
   backupService: BackupService;
@@ -111,6 +113,7 @@ export function createServer(deps: ServerDeps): Express {
     sendJobService,
     userRepo,
     userService,
+    oidc,
     webhookService,
     featureFlagService,
     backupService,
@@ -180,7 +183,7 @@ export function createServer(deps: ServerDeps): Express {
   app.use(sendRouter(mailer, sendJobService, apiKeyService, logger));
   app.use(jobsRouter(sendJobService, apiKeyService, userRepo, logger));
 
-  app.use(authRouter(userService, userRepo));
+  app.use(authRouter(userService, userRepo, oidc));
 
   const adminAuth = createAdminAuth(apiKeyService, userRepo, logger);
   app.use('/admin/api', adminAuth);

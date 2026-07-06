@@ -5,6 +5,8 @@ import type { Authz } from '../../lib/authz';
 
 export interface SessionData {
   userId?: string;
+  /** In-flight OIDC login state (set on /oidc/start, cleared on /oidc/callback). */
+  oidc?: { state: string; nonce: string; verifier: string };
 }
 
 declare global {
