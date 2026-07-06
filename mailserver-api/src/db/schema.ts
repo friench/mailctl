@@ -58,6 +58,9 @@ export const domains = sqliteTable('domains', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const MIN_TLS_VERSIONS = ['TLSv1.2', 'TLSv1.3'] as const;
+export type MinTlsVersion = (typeof MIN_TLS_VERSIONS)[number];
+
 export const smtpAccounts = sqliteTable(
   'smtp_accounts',
   {
@@ -66,6 +69,12 @@ export const smtpAccounts = sqliteTable(
     host: text('host').notNull(),
     port: integer('port').notNull(),
     secure: integer('secure', { mode: 'boolean' }).notNull(),
+    // Per-account TLS policy. `requireTls` forces STARTTLS; `rejectUnauthorized`
+    // overrides the global cert-verification default (null = inherit);
+    // `minTlsVersion` pins a floor (null = library default).
+    requireTls: integer('require_tls', { mode: 'boolean' }).notNull().default(false),
+    rejectUnauthorized: integer('reject_unauthorized', { mode: 'boolean' }),
+    minTlsVersion: text('min_tls_version', { enum: MIN_TLS_VERSIONS }),
     userEnvVar: text('user_env_var'),
     passwordEnvVar: text('password_env_var'),
     fromAddress: text('from_address').notNull(),

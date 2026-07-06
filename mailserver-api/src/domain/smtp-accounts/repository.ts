@@ -1,13 +1,16 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { Db } from '../../db/client';
-import { smtpAccounts, type SmtpAccountRow } from '../../db/schema';
+import { smtpAccounts, type MinTlsVersion, type SmtpAccountRow } from '../../db/schema';
 
 export interface CreateSmtpAccountInput {
   name: string;
   host: string;
   port: number;
   secure: boolean;
+  requireTls?: boolean;
+  rejectUnauthorized?: boolean | null;
+  minTlsVersion?: MinTlsVersion | null;
   userEnvVar?: string | null;
   passwordEnvVar?: string | null;
   fromAddress: string;
@@ -22,6 +25,9 @@ export interface UpdateSmtpAccountInput {
   host?: string;
   port?: number;
   secure?: boolean;
+  requireTls?: boolean;
+  rejectUnauthorized?: boolean | null;
+  minTlsVersion?: MinTlsVersion | null;
   userEnvVar?: string | null;
   passwordEnvVar?: string | null;
   fromAddress?: string;
@@ -41,6 +47,9 @@ export class SmtpAccountRepository {
       host: input.host,
       port: input.port,
       secure: input.secure,
+      requireTls: input.requireTls ?? false,
+      rejectUnauthorized: input.rejectUnauthorized ?? null,
+      minTlsVersion: input.minTlsVersion ?? null,
       userEnvVar: input.userEnvVar ?? null,
       passwordEnvVar: input.passwordEnvVar ?? null,
       fromAddress: input.fromAddress,
@@ -87,6 +96,9 @@ export class SmtpAccountRepository {
       'host',
       'port',
       'secure',
+      'requireTls',
+      'rejectUnauthorized',
+      'minTlsVersion',
       'userEnvVar',
       'passwordEnvVar',
       'fromAddress',

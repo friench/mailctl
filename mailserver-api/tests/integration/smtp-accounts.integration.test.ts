@@ -45,6 +45,43 @@ describe('/admin/api/smtp-accounts', () => {
       expect(mailer.getDefaultFrom()).toBe('"Mailer" <noreply@example.com>');
     });
 
+    it('stores a per-account TLS policy and returns it, defaulting when omitted', async () => {
+      const withPolicy = await request(app)
+        .post('/admin/api/smtp-accounts')
+        .set('X-Api-Key', adminKey)
+        .send({
+          name: 'strict',
+          host: 'mail.example.com',
+          port: 587,
+          secure: false,
+          requireTls: true,
+          rejectUnauthorized: true,
+          minTlsVersion: 'TLSv1.2',
+          fromAddress: 'a@example.com',
+          priority: 2,
+        });
+      expect(withPolicy.status).toBe(201);
+      expect(withPolicy.body.requireTls).toBe(true);
+      expect(withPolicy.body.rejectUnauthorized).toBe(true);
+      expect(withPolicy.body.minTlsVersion).toBe('TLSv1.2');
+
+      // Omitted policy → safe defaults (requireTls false, inherit verification).
+      const plain = await request(app)
+        .post('/admin/api/smtp-accounts')
+        .set('X-Api-Key', adminKey)
+        .send({
+          name: 'plain',
+          host: 'mail.example.com',
+          port: 587,
+          secure: false,
+          fromAddress: 'b@example.com',
+          priority: 3,
+        });
+      expect(plain.body.requireTls).toBe(false);
+      expect(plain.body.rejectUnauthorized).toBeNull();
+      expect(plain.body.minTlsVersion).toBeNull();
+    });
+
     it('persists env-var indirection without storing secrets', async () => {
       const res = await request(app)
         .post('/admin/api/smtp-accounts')

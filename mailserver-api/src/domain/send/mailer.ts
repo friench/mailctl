@@ -11,15 +11,28 @@ function isTransientError(err: Error & { code?: string }): boolean {
   return TRANSIENT_ERROR_PATTERNS.some((p) => err.message?.includes(p));
 }
 
-function createTransporter(
+/**
+ * Build the nodemailer transport options for an account, applying its per-account
+ * TLS policy over the global cert-verification default. Pure + exported so the
+ * policy mapping is unit-testable without touching nodemailer.
+ */
+export function buildTransportOptions(
   account: ResolvedSmtpAccount,
-  tlsRejectUnauthorized: boolean,
-): Transporter {
+  globalRejectUnauthorized: boolean,
+): nodemailer.TransportOptions & Record<string, unknown> {
+  const tls: Record<string, unknown> = {
+    // Per-account override wins; null inherits the global default.
+    rejectUnauthorized: account.rejectUnauthorized ?? globalRejectUnauthorized,
+  };
+  if (account.minTlsVersion) tls.minVersion = account.minTlsVersion;
+
   const opts: nodemailer.TransportOptions & Record<string, unknown> = {
     host: account.host,
     port: account.port,
     secure: account.secure,
-    tls: { rejectUnauthorized: tlsRejectUnauthorized },
+    // Force STARTTLS when required (ignored for implicit-TLS `secure` accounts).
+    requireTLS: account.requireTls,
+    tls,
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 15_000,
@@ -28,8 +41,14 @@ function createTransporter(
   if (account.user) {
     opts.auth = { user: account.user, pass: account.password };
   }
+  return opts;
+}
 
-  return nodemailer.createTransport(opts);
+function createTransporter(
+  account: ResolvedSmtpAccount,
+  tlsRejectUnauthorized: boolean,
+): Transporter {
+  return nodemailer.createTransport(buildTransportOptions(account, tlsRejectUnauthorized));
 }
 
 interface MailSenderAccount extends ResolvedSmtpAccount {

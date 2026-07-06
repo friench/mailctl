@@ -243,7 +243,14 @@ register(
     name: z.string(),
     host: z.string(),
     port: z.number().int(),
-    secure: z.boolean(),
+    secure: z.boolean().describe('Implicit TLS on connect (port 465)'),
+    requireTls: z.boolean().optional().describe('Force STARTTLS (fail if unavailable)'),
+    rejectUnauthorized: z
+      .boolean()
+      .nullable()
+      .optional()
+      .describe('Verify the relay cert; null inherits the global default'),
+    minTlsVersion: z.enum(['TLSv1.2', 'TLSv1.3']).nullable().optional(),
     fromAddress: z.string(),
     priority: z.number().int(),
     fromName: z.string().optional(),
@@ -780,6 +787,9 @@ register(
     host: z.string().optional(),
     port: z.number().int().optional(),
     secure: z.boolean().optional(),
+    requireTls: z.boolean().optional(),
+    rejectUnauthorized: z.boolean().nullable().optional(),
+    minTlsVersion: z.enum(['TLSv1.2', 'TLSv1.3']).nullable().optional(),
     priority: z.number().int().optional(),
     fromAddress: z.string().optional(),
     fromName: z.string().nullable().optional(),

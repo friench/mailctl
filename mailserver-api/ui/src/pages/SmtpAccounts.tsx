@@ -19,6 +19,25 @@ export function SmtpAccountsPage() {
         { key: 'priority', header: t('smtpAccounts.colPriority'), render: (r) => r.priority },
         { key: 'secure', header: t('smtpAccounts.colTls'), render: (r) => formatBoolean(r.secure) },
         {
+          key: 'tlsPolicy',
+          header: t('smtpAccounts.colTlsPolicy'),
+          render: (r) => (
+            <span className="text-xs text-slate-600">
+              {[
+                r.requireTls ? 'STARTTLS' : null,
+                r.rejectUnauthorized === true
+                  ? 'verify'
+                  : r.rejectUnauthorized === false
+                    ? 'no-verify'
+                    : null,
+                r.minTlsVersion ?? null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || '–'}
+            </span>
+          ),
+        },
+        {
           key: 'active',
           header: t('smtpAccounts.colActive'),
           render: (r) => formatBoolean(r.active),
@@ -46,6 +65,27 @@ export function SmtpAccountsPage() {
           defaultValue: 587,
         },
         { name: 'secure', label: t('smtpAccounts.fieldTls'), type: 'checkbox' },
+        { name: 'requireTls', label: t('smtpAccounts.fieldRequireTls'), type: 'checkbox' },
+        {
+          name: 'rejectUnauthorized',
+          label: t('smtpAccounts.fieldVerify'),
+          type: 'select',
+          options: [
+            { value: 'default', label: t('smtpAccounts.verifyDefault') },
+            { value: 'verify', label: t('smtpAccounts.verifyOn') },
+            { value: 'skip', label: t('smtpAccounts.verifyOff') },
+          ],
+        },
+        {
+          name: 'minTlsVersion',
+          label: t('smtpAccounts.fieldMinTls'),
+          type: 'select',
+          options: [
+            { value: '', label: t('smtpAccounts.minTlsAny') },
+            { value: 'TLSv1.2', label: 'TLSv1.2' },
+            { value: 'TLSv1.3', label: 'TLSv1.3' },
+          ],
+        },
         {
           name: 'fromAddress',
           label: t('smtpAccounts.fieldFromAddress'),
@@ -69,9 +109,13 @@ export function SmtpAccountsPage() {
           host: values.host,
           port: Number(values.port),
           secure: Boolean(values.secure),
+          requireTls: Boolean(values.requireTls),
           fromAddress: values.fromAddress,
           priority: Number(values.priority),
         };
+        if (values.rejectUnauthorized === 'verify') body.rejectUnauthorized = true;
+        else if (values.rejectUnauthorized === 'skip') body.rejectUnauthorized = false;
+        if (values.minTlsVersion) body.minTlsVersion = values.minTlsVersion;
         if (values.fromName) body.fromName = values.fromName;
         if (values.userEnvVar) body.userEnvVar = values.userEnvVar;
         if (values.passwordEnvVar) body.passwordEnvVar = values.passwordEnvVar;
