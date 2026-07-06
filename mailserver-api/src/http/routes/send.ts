@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import type { MailSender } from '../../domain/send/mailer';
 import type { ApiKeyService } from '../../domain/apikeys/service';
+import type { SuppressionService } from '../../domain/suppressions/service';
 import type { SendJobService } from '../../domain/queue/service';
 import { serializeSendJobSummary } from '../../domain/queue/serialize';
 import type { Logger } from '../../logger';
@@ -18,6 +19,7 @@ export function sendRouter(
   mailer: MailSender,
   queueService: SendJobService,
   apiKeyService: ApiKeyService,
+  suppressionService: SuppressionService,
   logger: Logger,
 ) {
   const router = Router();
@@ -36,6 +38,19 @@ export function sendRouter(
         const fromError = mailer.validateFrom(from);
         if (fromError) {
           res.status(400).json({ error: fromError });
+          return;
+        }
+      }
+
+      // Suppression: block delivery to suppressed recipients unless this key is
+      // exempt. Reject the whole send (don't partially deliver) so it's explicit.
+      if (!req.apiKey?.suppressionExempt) {
+        const suppressed = suppressionService.filterSuppressed(to.split(','));
+        if (suppressed.length > 0) {
+          res.status(422).json({
+            error: 'One or more recipients are suppressed',
+            suppressed: suppressed.map((s) => ({ address: s.address, reason: s.reason })),
+          });
           return;
         }
       }

@@ -578,6 +578,39 @@ register(
   ({ raw }) => client.post('/admin/api/bounces/ingest', { raw }),
 );
 
+// ---- suppression list ----
+register(
+  'list_suppressions',
+  {
+    title: 'List suppressions',
+    description: 'List suppressed recipient addresses (GET /admin/api/suppressions).',
+    readOnly: true,
+  },
+  {},
+  () => client.get('/admin/api/suppressions'),
+);
+
+register(
+  'add_suppression',
+  {
+    title: 'Add suppression',
+    description: 'Suppress a recipient address so /send refuses to deliver to it.',
+  },
+  {
+    address: z.string(),
+    reason: z.enum(['hard_bounce', 'complaint', 'manual', 'unsubscribe']).optional(),
+    note: z.string().optional(),
+  },
+  (body) => client.post('/admin/api/suppressions', body),
+);
+
+register(
+  'remove_suppression',
+  { title: 'Remove suppression', description: 'Remove a suppression entry.', destructive: true },
+  { id: z.string() },
+  ({ id }) => client.delete(`/admin/api/suppressions/${seg(id)}`),
+);
+
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);

@@ -7,6 +7,7 @@ export function serializeApiKey(row: ApiKeyRow): ApiKeyDTO {
     name: row.name,
     prefix: row.prefix,
     scopes: row.scopes,
+    suppressionExempt: row.suppressionExempt,
     expiresAt: row.expiresAt?.toISOString() ?? null,
     lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
     revokedAt: row.revokedAt?.toISOString() ?? null,

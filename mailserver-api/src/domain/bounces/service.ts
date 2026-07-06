@@ -5,6 +5,7 @@ import type { BounceEventRow } from '../../db/schema';
 import type { SendJobRepository } from '../queue/repository';
 import type { EventDispatcher } from '../events/types';
 import { NOOP_DISPATCHER } from '../events/types';
+import type { SuppressionService } from '../suppressions/service';
 import type { BounceRepository } from './repository';
 
 export interface IngestResult {
@@ -25,6 +26,7 @@ export class BounceService {
     private readonly sendJobRepo: SendJobRepository,
     private readonly logger: Logger,
     private readonly events: EventDispatcher = NOOP_DISPATCHER,
+    private readonly suppressions?: SuppressionService,
   ) {}
 
   ingest(raw: string): IngestResult {
@@ -47,6 +49,10 @@ export class BounceService {
         originalMessageId: dsn.originalMessageId,
       });
       events.push(row);
+      // A hard bounce means the address is undeliverable — auto-suppress it.
+      if (r.classification === 'hard') {
+        this.suppressions?.addFromBounce(r.recipient, row.id);
+      }
       this.events.dispatch('send.bounced', {
         bounceId: row.id,
         sendJobId: row.sendJobId,

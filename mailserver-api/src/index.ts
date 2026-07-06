@@ -35,6 +35,8 @@ import { FetchmailService } from './domain/fetchmail/service';
 import { ImportService } from './domain/import/service';
 import { BounceRepository } from './domain/bounces/repository';
 import { BounceService } from './domain/bounces/service';
+import { SuppressionRepository } from './domain/suppressions/repository';
+import { SuppressionService } from './domain/suppressions/service';
 import { HttpOidcProvider, DisabledOidcProvider } from './domain/auth/oidc-provider';
 import type { OidcRouteOptions } from './http/routes/auth';
 import { makeSecretBox } from './lib/secret-box';
@@ -249,11 +251,14 @@ const sendJobRepo = new SendJobRepository(dbClient.db);
 const sendJobService = new SendJobService(sendJobRepo, mailer, logger, webhookService);
 sendJobService.recoverStuckJobs();
 
+const suppressionService = new SuppressionService(new SuppressionRepository(dbClient.db), logger);
+
 const bounceService = new BounceService(
   new BounceRepository(dbClient.db),
   sendJobRepo,
   logger,
   webhookService,
+  suppressionService,
 );
 
 const backupS3 =
@@ -351,6 +356,7 @@ const app = createServer({
   fetchmailService,
   importService,
   bounceService,
+  suppressionService,
   syncService,
   sendJobService,
   userRepo,

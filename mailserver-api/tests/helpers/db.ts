@@ -23,6 +23,8 @@ import { FetchmailRepository } from '../../src/domain/fetchmail/repository';
 import { FetchmailService } from '../../src/domain/fetchmail/service';
 import { BounceRepository } from '../../src/domain/bounces/repository';
 import { BounceService } from '../../src/domain/bounces/service';
+import { SuppressionRepository } from '../../src/domain/suppressions/repository';
+import { SuppressionService } from '../../src/domain/suppressions/service';
 import { makeSecretBox } from '../../src/lib/secret-box';
 import { SyncService } from '../../src/domain/sync/service';
 import { SendJobRepository } from '../../src/domain/queue/repository';
@@ -96,6 +98,7 @@ export interface TestDbHandle {
   fetchmailService: FetchmailService;
   bounceService: BounceService;
   bounceRepo: BounceRepository;
+  suppressionService: SuppressionService;
   syncService: SyncService;
   sendJobRepo: SendJobRepository;
   userRepo: UserRepository;
@@ -186,8 +189,18 @@ export function createTestDb(
   );
   const syncService = new SyncService(dms, domainRepo, mailboxRepo, aliasRepo, silentLogger);
 
+  const suppressionService = new SuppressionService(
+    new SuppressionRepository(client.db),
+    silentLogger,
+  );
   const bounceRepo = new BounceRepository(client.db);
-  const bounceService = new BounceService(bounceRepo, sendJobRepo, silentLogger, webhookService);
+  const bounceService = new BounceService(
+    bounceRepo,
+    sendJobRepo,
+    silentLogger,
+    webhookService,
+    suppressionService,
+  );
 
   const dnsResolver = new StubDnsResolver();
   const dnsValidator = new DnsValidator({ resolver: dnsResolver });
@@ -214,6 +227,7 @@ export function createTestDb(
     fetchmailService,
     bounceService,
     bounceRepo,
+    suppressionService,
     syncService,
     sendJobRepo,
     userRepo,
