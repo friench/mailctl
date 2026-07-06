@@ -11,6 +11,7 @@ import { BackupService } from '../../src/domain/backups/service';
 import { StatsService } from '../../src/domain/stats/service';
 import { EngineService } from '../../src/domain/engine/service';
 import { OpsService } from '../../src/domain/ops/service';
+import { ImportService } from '../../src/domain/import/service';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -84,6 +85,15 @@ export function createTestApp(h: TestDbHandle, env: Env = TEST_ENV): TestAppHand
     rspamdUiUrl: null,
   });
   const opsService = new OpsService(h.opsClient);
+  const importService = new ImportService(
+    domainService,
+    h.domainRepo,
+    h.mailboxService,
+    h.mailboxRepo,
+    h.aliasService,
+    h.aliasRepo,
+    logger,
+  );
   const app = createServer({
     env,
     logger,
@@ -101,6 +111,7 @@ export function createTestApp(h: TestDbHandle, env: Env = TEST_ENV): TestAppHand
     opsService,
     migrationService: h.migrationService,
     fetchmailService: h.fetchmailService,
+    importService,
     syncService: h.syncService,
     sendJobService,
     userRepo: h.userRepo,

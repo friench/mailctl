@@ -32,6 +32,7 @@ import { DoveadmMigrator } from './domain/migrations/migrator';
 import { MigrationWorker } from './workers/migration-worker';
 import { FetchmailRepository } from './domain/fetchmail/repository';
 import { FetchmailService } from './domain/fetchmail/service';
+import { ImportService } from './domain/import/service';
 import { makeSecretBox } from './lib/secret-box';
 import { AliasService } from './domain/aliases/service';
 import { SyncService } from './domain/sync/service';
@@ -201,6 +202,16 @@ const domainService = new DomainService(
   nginxService,
 );
 
+const importService = new ImportService(
+  domainService,
+  domainRepo,
+  mailboxService,
+  mailboxRepo,
+  aliasService,
+  aliasRepo,
+  logger,
+);
+
 const sendJobRepo = new SendJobRepository(dbClient.db);
 const sendJobService = new SendJobService(sendJobRepo, mailer, logger, webhookService);
 sendJobService.recoverStuckJobs();
@@ -298,6 +309,7 @@ const app = createServer({
   opsService,
   migrationService,
   fetchmailService,
+  importService,
   syncService,
   sendJobService,
   userRepo,

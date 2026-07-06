@@ -525,6 +525,36 @@ register(
   ({ id }) => client.delete(`/admin/api/fetchmail/${seg(id)}`),
 );
 
+// ---- bulk import ----
+register(
+  'import_bulk',
+  {
+    title: 'Bulk import',
+    description:
+      'Idempotently provision domains/mailboxes/aliases from a JSON document (POST /admin/api/import). Set dryRun to preview without applying. Existing entities are skipped.',
+  },
+  {
+    dryRun: z.boolean().optional(),
+    domains: z
+      .array(z.object({ name: z.string(), dkimSelector: z.string().optional() }))
+      .optional(),
+    mailboxes: z
+      .array(
+        z.object({
+          address: z.string(),
+          password: z.string().optional(),
+          quotaMb: z.number().int().optional(),
+          notes: z.string().optional(),
+        }),
+      )
+      .optional(),
+    aliases: z
+      .array(z.object({ address: z.string(), target: z.string(), notes: z.string().optional() }))
+      .optional(),
+  },
+  ({ dryRun, ...doc }) => client.post(`/admin/api/import?dryRun=${dryRun ? 'true' : 'false'}`, doc),
+);
+
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);

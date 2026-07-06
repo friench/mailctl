@@ -25,6 +25,7 @@ import { EnginePage } from './pages/Engine';
 import { OpsPage } from './pages/Ops';
 import { MigrationsPage } from './pages/Migrations';
 import { FetchmailPage } from './pages/Fetchmail';
+import { ImportPage } from './pages/Import';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -75,6 +76,7 @@ export default function App() {
             <Route path="mailboxes" element={<MailboxesPage />} />
             <Route path="mailboxes/:id/sieve" element={<MailboxSievePage />} />
             <Route path="aliases" element={<AliasesPage />} />
+            <Route path="import" element={<ImportPage />} />
             <Route path="quarantine" element={<QuarantinePage />} />
             <Route path="access-lists" element={<AccessListsPage />} />
             <Route path="engine" element={<EnginePage />} />

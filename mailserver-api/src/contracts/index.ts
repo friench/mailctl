@@ -381,6 +381,24 @@ export interface SessionDTO {
   ips: string[];
 }
 
+// ── bulk import ──────────────────────────────────────────────────────────────
+
+export type ImportActionDTO = 'created' | 'skipped' | 'failed';
+
+export interface ImportItemResultDTO {
+  key: string;
+  action: ImportActionDTO;
+  error?: string;
+}
+
+export interface ImportResultDTO {
+  dryRun: boolean;
+  domains: ImportItemResultDTO[];
+  mailboxes: ImportItemResultDTO[];
+  aliases: ImportItemResultDTO[];
+  summary: { created: number; skipped: number; failed: number };
+}
+
 // ── inbound fetching (fetchmail) ─────────────────────────────────────────────
 
 export type FetchmailProtocolDTO = 'imap' | 'pop3';
