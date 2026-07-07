@@ -2,11 +2,27 @@
 # (SMTP/IMAP) + mail-api (control plane). Configure via root `.env` (see
 # `.env.example`).
 
+# Shared log-rotation policy (json-file, capped) applied to every service so no
+# container's logs can grow unbounded on the host.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   nginx:
     image: jonasal/nginx-certbot:6-alpine
     restart: unless-stopped
     container_name: nginx
+    mem_limit: 128m
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     env_file:
       - ./nginx/nginx-certbot.env
     ports:
@@ -42,11 +58,10 @@ services:
       - NET_ADMIN
     restart: unless-stopped
     stop_grace_period: 1m
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "5"
+    # mem_limit intentionally unset: the Rspamd/ClamAV footprint varies widely and
+    # a cap that's too low OOM-kills mail delivery. Set one (e.g. 3g) once you know
+    # your host's steady-state usage.
+    logging: *default-logging
     networks:
       - web_network
 
@@ -55,9 +70,13 @@ services:
   # capabilities mail-api needs are enabled (inspect containers, run exec,
   # restart). The raw socket is mounted read-only and never exposed to mail-api.
   docker-socket-proxy:
-    image: ghcr.io/tecnativa/docker-socket-proxy:latest
+    # Pinned: the most security-sensitive image in the stack — bump deliberately,
+    # not implicitly via :latest.
+    image: ghcr.io/tecnativa/docker-socket-proxy:0.3.0
     container_name: docker-socket-proxy
     restart: unless-stopped
+    mem_limit: 64m
+    logging: *default-logging
     environment:
       - CONTAINERS=1 # inspect / list containers + create exec
       - EXEC=1 # start/inspect exec (doveadm/rspamc/tee/postqueue/…)
@@ -91,9 +110,20 @@ services:
     volumes:
       - ./mailserver-api/data:/app/data
       - ./mailserver-api/data/nginx-generated:/app/nginx-generated
+    # Runs as USER node already; drop every capability and block privilege
+    # escalation so a mail-api compromise has minimal reach.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    logging: *default-logging
     networks:
       - web_network
       - docker_proxy
+    # Start-order only (not service_healthy): docker-mailserver is intentionally
+    # unhealthy on first boot until the first mailbox exists, and that mailbox is
+    # created through mail-api — gating on health would deadlock the bootstrap.
     depends_on:
       - mailserver
       - nginx

@@ -43,7 +43,9 @@ A self-hosted mail control plane that wraps three Docker services:
 
 - All-in-one SMTP/IMAP/anti-spam stack
 - Configured via env (`./.env`) and config files in `docker-data/dms/config/`
-- mail-api provisions mailboxes/aliases through `docker exec mailserver setup …` (over the docker.sock the API has access to)
+- mail-api provisions mailboxes/aliases through `docker exec mailserver setup …`, reaching the Docker API via the least-privilege `docker-socket-proxy` (never the raw socket)
+
+> **Docker-access blast radius.** The socket-proxy exposes only `CONTAINERS`/`EXEC`/`POST`/`ALLOW_RESTARTS` and cannot scope `exec` to a single target. So a compromise of mail-api still allows `docker exec` (as root) into `mailserver` and `nginx` — reading every mailbox, the OpenDKIM private keys, and the Let's Encrypt private keys — plus restarting stack containers. It is materially better than a raw socket mount (no ability to create containers, bind-mount the host FS, or touch images/networks/volumes, so no trivial host escape), but "root inside the existing containers" is the ceiling this proxy can enforce. mail-api additionally runs with `no-new-privileges` + `cap_drop: ALL`. Eliminating the residual risk would require a purpose-built provisioning sidecar exposing only specific `setup …` verbs.
 
 ### mail-api (this repo's `mailserver-api/`)
 

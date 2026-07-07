@@ -22,7 +22,7 @@ docker-compose.yml            # full stack (nginx + mailserver + mail-api)
 nginx/
   user_conf.d/
     default.conf              # hardened fallback vhost
-    api.conf                  # static control plane vhost (you provide the hostname)
+    api.conf.example          # control-plane vhost template (copy → api.conf, set hostname)
 mailserver-api/
   src/                        # backend (TS, Express, Drizzle)
     env.ts logger.ts server.ts index.ts
