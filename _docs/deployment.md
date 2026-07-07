@@ -40,6 +40,13 @@ INITIAL_ADMIN_PASSWORD=$(openssl rand -hex 16)
 
 (Or leave `INITIAL_ADMIN_*` empty and use `pnpm create-admin` after first start.)
 
+These files hold secrets (`SESSION_SECRET`, SMTP passwords, `INITIAL_ADMIN_PASSWORD`).
+Tighten their permissions so they are not world-readable on the host:
+
+```bash
+chmod 600 .env mailserver-api/.env nginx/nginx-certbot.env
+```
+
 ## 2. Bring up the stack
 
 ```bash
@@ -65,7 +72,7 @@ The first `docker compose up` triggers nginx-certbot to acquire a Let's Encrypt 
 
 ## 3. Configure your first domain via the UI
 
-1. Open `https://<your-control-plane-host>/admin/login`. You can either point a domain at the server and add a vhost in `nginx/user_conf.d/api.conf`, or for first-time setup `ssh -L 3050:localhost:3050 …` and use `http://localhost:3050/admin/login`.
+1. Open `https://<your-control-plane-host>/admin/login`. Point a domain at the server and add the control-plane vhost by copying the template — `cp nginx/user_conf.d/api.conf.example nginx/user_conf.d/api.conf`, set `server_name` to your hostname, then `docker compose restart nginx` (nginx-certbot acquires the cert on boot). For first-time setup without a domain, `ssh -L 3050:localhost:3050 …` and use `http://localhost:3050/admin/login`.
 2. Sign in with `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`.
 3. **Domains** → "New" → add `example.com` (and a DKIM selector like `mail`). mail-api writes `nginx-generated/mail-example-com.conf`; nginx picks it up and certbot acquires a cert.
 4. **SMTP accounts** → "New" → fill in the outbound credentials. For mail-api to send through the local docker-mailserver, host = `mailserver`, port = 587, no TLS. Add the credentials' env-var names (e.g. `MAIL_USER_NOREPLY`, `MAIL_PASS_NOREPLY`) and put the actual values in `mailserver-api/.env` then restart `mail-api`.
@@ -199,8 +206,9 @@ docker inspect dokploy-traefik --format '{{range .Mounts}}{{.Source}} -> {{.Dest
    - `SESSION_SECRET=$(openssl rand -hex 32)`
    - `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` (or create the admin later via `pnpm create-admin`)
    - `TRAEFIK_NETWORK`, `TRAEFIK_CERT_RESOLVER`, `TRAEFIK_ACME_PATH` — from the discovery commands above
-   - `DOCKER_GID` — the GID that owns `/var/run/docker.sock` (`stat -c '%g' /var/run/docker.sock`; default `983`). mail-api runs as a non-root user and needs this group to `docker exec` into the mailserver for mailbox/DKIM provisioning. Without it every such op fails with `EACCES`.
 5. Click **Deploy**.
+
+mail-api reaches the Docker API through a bundled `docker-socket-proxy` (inspect/exec/restart only) rather than a raw socket mount, so no `DOCKER_GID` / host docker-group setup is needed.
 
 The compose file ships two Traefik routers on `mail-api`:
 
@@ -219,7 +227,7 @@ docker exec mailserver setup email add postmaster@example.com '<password>'
 #   POST https://${ADMIN_HOSTNAME}/admin/api/mailboxes/sync
 ```
 
-> Provisioning from the **dashboard** (Domains → New, then Mailboxes → New) does the same thing — but only once `DOCKER_GID` is set (see step 4), otherwise the panel's `docker exec` fails with `EACCES`. The direct command above works regardless and is handy for the very first bootstrap.
+> Provisioning from the **dashboard** (Domains → New, then Mailboxes → New) does the same thing via the socket-proxy. The direct command above works regardless and is handy for the very first bootstrap.
 
 Within one restart cycle Dovecot starts and all four ports begin listening.
 
