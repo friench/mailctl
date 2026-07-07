@@ -129,6 +129,23 @@ describe('/admin/api/aliases', () => {
     expect(res.status).toBe(400);
   });
 
+  it('rejects a target with an embedded newline (postfix-virtual injection)', async () => {
+    const res = await request(app).post('/admin/api/aliases').set('X-Api-Key', adminKey).send({
+      address: 'inj@example.com',
+      target: 'ok@example.com\nevil@other.com evil2@other.com',
+    });
+    expect(res.status).toBe(400);
+    expect(h.dms.aliases.has('inj@example.com')).toBe(false);
+  });
+
+  it('rejects a malformed target token', async () => {
+    const res = await request(app)
+      .post('/admin/api/aliases')
+      .set('X-Api-Key', adminKey)
+      .send({ address: 'bad@example.com', target: 'not an address' });
+    expect(res.status).toBe(400);
+  });
+
   it('generates a temp alias with a TTL', async () => {
     const res = await request(app)
       .post('/admin/api/aliases/temp')
