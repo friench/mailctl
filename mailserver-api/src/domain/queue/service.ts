@@ -2,6 +2,7 @@ import { BusinessError } from '../../lib/errors';
 import { sendCompletedTotal, sendFailedTotal } from '../../lib/metrics';
 import type { Logger } from '../../logger';
 import type { MailSender } from '../send/mailer';
+import { PermanentSendError } from '../send/types';
 import type { SendJobPayload, SendJobRow } from '../../db/schema';
 import type { EventDispatcher } from '../events/types';
 import { NOOP_DISPATCHER } from '../events/types';
@@ -102,7 +103,9 @@ export class SendJobService {
       });
     } catch (err) {
       const error = err as Error;
-      const isLastAttempt = job.attempts >= job.maxAttempts;
+      // A permanent (5xx) failure won't be fixed by retrying — dead-letter now,
+      // regardless of how many attempts remain.
+      const isLastAttempt = err instanceof PermanentSendError || job.attempts >= job.maxAttempts;
 
       if (isLastAttempt) {
         this.repo.markDead(job.id, error.message);

@@ -2,13 +2,24 @@ import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import type { Logger } from '../../logger';
 import type { ResolvedSmtpAccount } from '../smtp-accounts/loader';
-import type { SendResult } from './types';
+import { PermanentSendError, type SendResult } from './types';
 
 const TRANSIENT_ERROR_PATTERNS = ['timeout', 'ETIMEDOUT', 'ECONNRESET', 'ECONNREFUSED'];
 
-function isTransientError(err: Error & { code?: string }): boolean {
+type SmtpError = Error & { code?: string; responseCode?: number };
+
+function isTransientError(err: SmtpError): boolean {
   if (err.code === 'ESOCKET') return true;
   return TRANSIENT_ERROR_PATTERNS.some((p) => err.message?.includes(p));
+}
+
+/**
+ * A 5xx SMTP reply is permanent (bad recipient, policy reject, message too big):
+ * neither retrying nor failing over to another relay will fix it. 4xx replies
+ * (greylisting, temp local error) stay transient and keep the retry/failover path.
+ */
+function isPermanentError(err: SmtpError): boolean {
+  return typeof err.responseCode === 'number' && err.responseCode >= 500 && err.responseCode < 600;
 }
 
 /**
@@ -162,6 +173,8 @@ export class MailSender {
       contentType: a.contentType,
     }));
 
+    let lastError: SmtpError | undefined;
+
     for (const account of this.accounts) {
       for (let retry = 1; retry <= maxRetries; retry++) {
         try {
@@ -178,17 +191,24 @@ export class MailSender {
           this.logger.info({ account: account.name, to, messageId: info.messageId }, 'Mail sent');
           return { messageId: info.messageId, account: account.name };
         } catch (err) {
-          const error = err as Error & { code?: string };
+          const error = err as SmtpError;
+          lastError = error;
           this.logger.warn(
             {
               account: account.name,
               retry,
               max: maxRetries,
+              responseCode: error.responseCode,
               error: error.message,
             },
             'SMTP send attempt failed',
           );
 
+          // A 5xx is permanent: don't retry this account, don't fail over, don't
+          // let the queue reschedule — surface it so the job is dead-lettered now.
+          if (isPermanentError(error)) {
+            throw new PermanentSendError(error);
+          }
           if (isTransientError(error) && retry < maxRetries) {
             this.recreateTransporter(account);
             continue;
@@ -198,6 +218,10 @@ export class MailSender {
       }
     }
 
-    throw new Error('All SMTP accounts failed');
+    // All accounts exhausted with transient failures — preserve the last cause.
+    throw new Error(
+      `All SMTP accounts failed; last: ${lastError?.message ?? 'unknown error'}`,
+      lastError ? { cause: lastError } : undefined,
+    );
   }
 }

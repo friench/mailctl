@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createTestDb, type TestDbHandle } from '../helpers/db';
 import { SendJobService, computeBackoffMs } from '../../src/domain/queue/service';
+import { PermanentSendError } from '../../src/domain/send/types';
 import { createLogger } from '../../src/logger';
 import type { MailSender } from '../../src/domain/send/mailer';
 
@@ -96,6 +97,20 @@ describe('SendJobService.processOne', () => {
     expect(after?.attempts).toBe(1);
     expect(after?.lastError).toMatch(/All SMTP accounts failed/);
     expect(after?.nextAttemptAt.getTime()).toBeGreaterThan(job.createdAt.getTime());
+  });
+
+  it('dead-letters immediately on a permanent error, ignoring remaining attempts', async () => {
+    const mailer = makeMailer();
+    mailer.send.mockRejectedValue(new PermanentSendError(new Error('550 mailbox unavailable')));
+    const service = makeService(h, mailer);
+
+    const job = service.enqueue({ payload: samplePayload, maxAttempts: 3 });
+    await service.processOne();
+
+    const after = h.sendJobRepo.findById(job.id);
+    expect(after?.status).toBe('dead');
+    expect(after?.attempts).toBe(1); // not retried up to maxAttempts
+    expect(after?.lastError).toMatch(/mailbox unavailable/);
   });
 
   it('marks dead after max attempts', async () => {
