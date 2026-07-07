@@ -1,6 +1,6 @@
 import Docker from 'dockerode';
-import { PassThrough } from 'node:stream';
 import type { Logger } from '../../logger';
+import { execInContainer } from '../../lib/docker-exec';
 
 export interface NginxReloader {
   reload(): Promise<void>;
@@ -24,31 +24,13 @@ export class DockerodeNginxReloader implements NginxReloader {
   }
 
   async reload(): Promise<void> {
-    const container = this.docker.getContainer(this.containerName);
-    const exec = await container.exec({
-      Cmd: ['nginx', '-s', 'reload'],
-      AttachStdout: true,
-      AttachStderr: true,
-    });
-    const stream = await exec.start({ hijack: true, stdin: false });
-
-    const stdoutBuf: Buffer[] = [];
-    const stderrBuf: Buffer[] = [];
-    const stdout = new PassThrough();
-    const stderr = new PassThrough();
-    stdout.on('data', (c: Buffer) => stdoutBuf.push(c));
-    stderr.on('data', (c: Buffer) => stderrBuf.push(c));
-    this.docker.modem.demuxStream(stream, stdout, stderr);
-
-    await new Promise<void>((resolve, reject) => {
-      stream.on('end', () => resolve());
-      stream.on('error', reject);
-    });
-
-    const inspect = await exec.inspect();
-    if (inspect.ExitCode !== 0) {
-      const err = Buffer.concat(stderrBuf).toString('utf-8').trim();
-      throw new Error(`nginx reload exited ${inspect.ExitCode}: ${err}`);
+    const { exitCode, stderr } = await execInContainer(this.docker, this.containerName, [
+      'nginx',
+      '-s',
+      'reload',
+    ]);
+    if (exitCode !== 0) {
+      throw new Error(`nginx reload exited ${exitCode}: ${stderr.trim()}`);
     }
     this.logger?.info('nginx reloaded');
   }

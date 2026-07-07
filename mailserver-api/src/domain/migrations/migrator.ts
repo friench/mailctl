@@ -1,6 +1,6 @@
 import Docker from 'dockerode';
-import { PassThrough } from 'node:stream';
 import type { Logger } from '../../logger';
+import { execInContainer } from '../../lib/docker-exec';
 import type { ImapSslMode } from '../../db/schema';
 
 export interface MigrationParams {
@@ -83,22 +83,13 @@ export class DoveadmMigrator implements Migrator {
   }
 
   private async exec(cmd: string[]): Promise<{ exitCode: number; output: string }> {
-    const container = this.docker.getContainer(this.dmsContainerName);
-    const exec = await container.exec({ Cmd: cmd, AttachStdout: true, AttachStderr: true });
-    const stream = await exec.start({ hijack: true, stdin: false });
-
-    const chunks: Buffer[] = [];
-    const sink = new PassThrough();
-    sink.on('data', (c: Buffer) => chunks.push(c));
-    // Multiplex both streams into one buffer so the log preserves ordering.
-    this.docker.modem.demuxStream(stream, sink, sink);
-
-    await new Promise<void>((resolve, reject) => {
-      stream.on('end', () => resolve());
-      stream.on('error', reject);
+    // combineStreams: keep stdout+stderr interleaved for the migration log.
+    // timeoutMs 0: a full `doveadm backup` can legitimately run for a long time;
+    // it runs in the serial MigrationWorker, so a hang blocks only that queue.
+    const { exitCode, combined } = await execInContainer(this.docker, this.dmsContainerName, cmd, {
+      combineStreams: true,
+      timeoutMs: 0,
     });
-
-    const inspect = await exec.inspect();
-    return { exitCode: inspect.ExitCode ?? 1, output: Buffer.concat(chunks).toString('utf-8') };
+    return { exitCode, output: combined };
   }
 }
