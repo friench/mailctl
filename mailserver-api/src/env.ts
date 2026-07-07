@@ -26,8 +26,13 @@ const envSchema = z.object({
   /** Number of proxy hops to trust for X-Forwarded-For (set to 1 when behind nginx). */
   TRUST_PROXY: z.coerce.number().int().min(0).max(10).default(0),
 
-  /** If set, /metrics requires this token (Bearer header or ?token=). Open if unset. */
+  /** If set, /metrics requires this token (Bearer header or ?token=). */
   METRICS_TOKEN: z.string().optional(),
+  /** Serve /metrics without a token. Off by default — otherwise /metrics 404s unless a token is set. */
+  METRICS_PUBLIC: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 
   /** Verify TLS certs of outbound SMTP relays. Default true; opt-out only for trusted relays. */
   SMTP_TLS_REJECT_UNAUTHORIZED: z
@@ -57,6 +62,19 @@ const envSchema = z.object({
     .string()
     .min(32, 'SESSION_SECRET must be at least 32 characters (run: openssl rand -hex 32)'),
 
+  /**
+   * Send the session cookie only over HTTPS. When unset, falls back to
+   * NODE_ENV === 'production'. Set explicitly to 'true' when terminating TLS at
+   * a proxy without running with NODE_ENV=production.
+   */
+  COOKIE_SECURE: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === 'true')),
+
+  /** Comma-separated extra origins allowed to make cookie-authenticated admin mutations. */
+  TRUSTED_ORIGINS: z.string().optional(),
+
   INITIAL_ADMIN_EMAIL: z.email().optional(),
   INITIAL_ADMIN_PASSWORD: z.string().min(8).optional(),
 
@@ -85,13 +103,19 @@ const envSchema = z.object({
   OIDC_SCOPES: z.string().default('openid email profile'),
   OIDC_BUTTON_LABEL: z.string().default('Sign in with SSO'),
   /** Auto-create a local user on first successful SSO login. */
-  OIDC_AUTO_PROVISION: z.coerce.boolean().default(false),
+  OIDC_AUTO_PROVISION: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   /** Role for auto-provisioned SSO users. */
   OIDC_DEFAULT_ROLE: z.enum(USER_ROLES).default('read_only'),
   /** Comma-separated emails granted `admin` on first SSO login. */
   OIDC_ADMIN_EMAILS: z.string().optional(),
   /** Require the IdP to report the email as verified. */
-  OIDC_REQUIRE_VERIFIED_EMAIL: z.coerce.boolean().default(true),
+  OIDC_REQUIRE_VERIFIED_EMAIL: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
   /** When `quarantine_retention_enabled`, expunge Junk messages older than this many days. */
   QUARANTINE_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
 

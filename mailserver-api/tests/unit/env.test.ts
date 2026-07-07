@@ -70,4 +70,32 @@ describe('loadEnv', () => {
     const env = loadEnv({ ...VALID_BASE, DATABASE_URL: '/var/lib/data.db' });
     expect(env.DATABASE_URL).toBe('/var/lib/data.db');
   });
+
+  it('parses OIDC boolean flags without inverting "false"', () => {
+    // Regression: z.coerce.boolean() treats the string "false" as true.
+    const disabled = loadEnv({
+      ...VALID_BASE,
+      OIDC_AUTO_PROVISION: 'false',
+      OIDC_REQUIRE_VERIFIED_EMAIL: 'false',
+    });
+    expect(disabled.OIDC_AUTO_PROVISION).toBe(false);
+    expect(disabled.OIDC_REQUIRE_VERIFIED_EMAIL).toBe(false);
+
+    const enabled = loadEnv({ ...VALID_BASE, OIDC_AUTO_PROVISION: 'true' });
+    expect(enabled.OIDC_AUTO_PROVISION).toBe(true);
+
+    // Defaults preserved when unset.
+    const defaults = loadEnv({ ...VALID_BASE });
+    expect(defaults.OIDC_AUTO_PROVISION).toBe(false);
+    expect(defaults.OIDC_REQUIRE_VERIFIED_EMAIL).toBe(true);
+  });
+
+  it('rejects a non-boolean OIDC flag value', () => {
+    vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('exit');
+    }) as never);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() => loadEnv({ ...VALID_BASE, OIDC_AUTO_PROVISION: 'yes' })).toThrow('exit');
+  });
 });

@@ -65,6 +65,7 @@ import { createErrorHandler } from './http/middleware/error';
 import { createSessionMiddleware } from './http/middleware/session';
 import { createAdminAuth } from './http/middleware/admin-auth';
 import { createRbacGuard } from './http/middleware/rbac';
+import { createOriginGuard } from './http/middleware/origin-guard';
 
 export interface ServerDeps {
   env: Env;
@@ -177,13 +178,13 @@ export function createServer(deps: ServerDeps): Express {
   app.use(
     createSessionMiddleware({
       password: env.SESSION_SECRET,
-      secure: env.NODE_ENV === 'production',
+      secure: env.COOKIE_SECURE ?? env.NODE_ENV === 'production',
     }),
   );
 
   app.use(healthRouter(mailer));
   app.use(openapiRouter());
-  app.use(metricsRouter({ token: env.METRICS_TOKEN }));
+  app.use(metricsRouter({ token: env.METRICS_TOKEN, public: env.METRICS_PUBLIC }));
   app.use(
     autoconfigRouter({
       mailHostname: env.MAIL_HOSTNAME ?? null,
@@ -195,6 +196,11 @@ export function createServer(deps: ServerDeps): Express {
 
   app.use(authRouter(userService, userRepo, oidc));
 
+  const trustedOrigins = (env.TRUSTED_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  app.use('/admin/api', createOriginGuard({ trustedOrigins }));
   const adminAuth = createAdminAuth(apiKeyService, userRepo, logger);
   app.use('/admin/api', adminAuth);
   app.use('/admin/api', createRbacGuard(userRepo));

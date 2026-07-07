@@ -5,7 +5,7 @@ import { webhookDeliveredTotal, webhookFailedTotal } from '../../lib/metrics';
 import type { EventDispatcher } from '../events/types';
 import type { FeatureFlagService } from '../feature-flags/service';
 import type { Logger } from '../../logger';
-import type { WebhookDeliveryRow, WebhookRow } from '../../db/schema';
+import type { WebhookDeliveryRow, WebhookEvent, WebhookRow } from '../../db/schema';
 import type { WebhookRepository } from './repository';
 import type { WebhookDeliveryRepository } from './delivery-repository';
 
@@ -103,7 +103,7 @@ export class WebhookService implements EventDispatcher {
 
   // ---------- Event dispatch ----------
 
-  dispatch(event: string, payload: Record<string, unknown>): void {
+  dispatch(event: WebhookEvent, payload: Record<string, unknown>): void {
     if (this.flags && !this.flags.isEnabled('webhooks_enabled')) {
       this.logger.debug({ event }, 'Webhooks disabled; skipping dispatch');
       return;

@@ -367,6 +367,7 @@ export type UserInsert = typeof users.$inferInsert;
 export const WEBHOOK_EVENTS = [
   'send.completed',
   'send.failed',
+  'send.bounced',
   'mailbox.created',
   'mailbox.deleted',
   'webhook.test',

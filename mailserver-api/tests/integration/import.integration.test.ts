@@ -60,6 +60,20 @@ describe('/admin/api/import', () => {
     expect(h.domainRepo.findByName('example.com')).toBeUndefined();
   });
 
+  it('rejects a traversal domain name up front (no bypass of field validation)', async () => {
+    const res = await imp({ domains: [{ name: '../../etc' }] });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a mailbox address with an embedded newline', async () => {
+    const res = await imp({
+      domains: [{ name: 'registered.com' }],
+      mailboxes: [{ address: 'foo\nevil@registered.com', password: 'ChangeMe123' }],
+    });
+    expect(res.status).toBe(400);
+    expect(h.mailboxRepo.findByAddress('foo\nevil@registered.com')).toBeUndefined();
+  });
+
   it('flags a new mailbox with no password as failed (even in dry run)', async () => {
     const res = await imp(
       { domains: [{ name: 'example.com' }], mailboxes: [{ address: 'x@example.com' }] },

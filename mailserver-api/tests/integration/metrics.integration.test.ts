@@ -13,8 +13,14 @@ describe('GET /metrics', () => {
 
   afterEach(() => h.close());
 
-  it('returns 200 with prometheus text when open', async () => {
+  it('404s by default when no token is set (fail closed)', async () => {
     const app: Express = createTestApp(h).app;
+    const res = await request(app).get('/metrics');
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 200 with prometheus text when explicitly public', async () => {
+    const app: Express = createTestApp(h, { ...TEST_ENV, METRICS_PUBLIC: true }).app;
     const res = await request(app).get('/metrics');
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('text/plain');
