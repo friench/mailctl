@@ -36,6 +36,8 @@ export const TEST_ENV: Env = {
   PASSWORD_HIBP_ENABLED: false,
   PASSWORD_MIN_LENGTH: 10,
   TRUST_PROXY: 0,
+  METRICS_PUBLIC: false,
+  COOKIE_SECURE: undefined,
   SESSION_SECRET: 'a'.repeat(64),
   BACKUP_DIR: './data/backups',
   BACKUP_INTERVAL_HOURS: 24,

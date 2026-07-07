@@ -26,8 +26,13 @@ const envSchema = z.object({
   /** Number of proxy hops to trust for X-Forwarded-For (set to 1 when behind nginx). */
   TRUST_PROXY: z.coerce.number().int().min(0).max(10).default(0),
 
-  /** If set, /metrics requires this token (Bearer header or ?token=). Open if unset. */
+  /** If set, /metrics requires this token (Bearer header or ?token=). */
   METRICS_TOKEN: z.string().optional(),
+  /** Serve /metrics without a token. Off by default — otherwise /metrics 404s unless a token is set. */
+  METRICS_PUBLIC: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 
   /** Verify TLS certs of outbound SMTP relays. Default true; opt-out only for trusted relays. */
   SMTP_TLS_REJECT_UNAUTHORIZED: z
@@ -56,6 +61,19 @@ const envSchema = z.object({
   SESSION_SECRET: z
     .string()
     .min(32, 'SESSION_SECRET must be at least 32 characters (run: openssl rand -hex 32)'),
+
+  /**
+   * Send the session cookie only over HTTPS. When unset, falls back to
+   * NODE_ENV === 'production'. Set explicitly to 'true' when terminating TLS at
+   * a proxy without running with NODE_ENV=production.
+   */
+  COOKIE_SECURE: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === 'true')),
+
+  /** Comma-separated extra origins allowed to make cookie-authenticated admin mutations. */
+  TRUSTED_ORIGINS: z.string().optional(),
 
   INITIAL_ADMIN_EMAIL: z.email().optional(),
   INITIAL_ADMIN_PASSWORD: z.string().min(8).optional(),

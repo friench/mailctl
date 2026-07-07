@@ -64,6 +64,21 @@ describe('POST /admin/auth/login', () => {
     expect(blocked.status).toBe(429);
     expect(blocked.body.error).toMatch(/Too many login attempts/);
   });
+
+  it('rejects a cookie-authenticated admin mutation from a foreign Origin (CSRF guard)', async () => {
+    const login = await request(app)
+      .post('/admin/auth/login')
+      .send({ email: 'admin@example.com', password: 'secret123' });
+    const cookie = String(login.headers['set-cookie']);
+
+    const blocked = await request(app)
+      .post('/admin/api/domains')
+      .set('Cookie', cookie)
+      .set('Origin', 'https://evil.example.com')
+      .send({ name: 'evil.test' });
+    expect(blocked.status).toBe(403);
+    expect(blocked.body.error).toMatch(/Cross-origin/);
+  });
 });
 
 describe('GET /admin/auth/me', () => {
