@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, lt } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { Db } from '../../db/client';
 import {
@@ -53,5 +53,10 @@ export class BounceRepository {
       .where(eq(bounceEvents.sendJobId, sendJobId))
       .orderBy(desc(bounceEvents.createdAt))
       .all();
+  }
+
+  /** Delete bounce events recorded before `cutoff`. Returns the row count. */
+  deleteBefore(cutoff: Date): number {
+    return this.db.delete(bounceEvents).where(lt(bounceEvents.createdAt, cutoff)).run().changes;
   }
 }

@@ -141,6 +141,13 @@
       "when": 1783355695922,
       "tag": "0019_charming_paladin",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1783466535947,
+      "tag": "0020_messy_hydra",
+      "breakpoints": true
     }
   ]
 }

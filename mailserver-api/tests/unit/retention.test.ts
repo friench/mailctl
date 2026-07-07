@@ -3,10 +3,19 @@ import { createDb, type DbClient } from '../../src/db/client';
 import { migrateDatabase } from '../../src/db/migrate';
 import { SendJobRepository } from '../../src/domain/queue/repository';
 import { WebhookDeliveryRepository } from '../../src/domain/webhooks/delivery-repository';
+import { BounceRepository } from '../../src/domain/bounces/repository';
+import { MigrationJobRepository } from '../../src/domain/migrations/repository';
 import { RetentionService } from '../../src/domain/retention/service';
 import { createLogger } from '../../src/logger';
-import { sendJobs, webhookDeliveries } from '../../src/db/schema';
-import type { SendJobRow, WebhookDeliveryRow, SendJobStatus } from '../../src/db/schema';
+import { sendJobs, webhookDeliveries, bounceEvents, migrationJobs } from '../../src/db/schema';
+import type {
+  SendJobRow,
+  WebhookDeliveryRow,
+  SendJobStatus,
+  BounceEventRow,
+  MigrationJobRow,
+  MigrationStatus,
+} from '../../src/db/schema';
 import { randomUUID } from 'node:crypto';
 
 const silentLogger = createLogger({ NODE_ENV: 'test', LOG_LEVEL: 'silent' });
@@ -20,6 +29,8 @@ describe('RetentionService', () => {
   let client: DbClient;
   let sendJobRepo: SendJobRepository;
   let webhookDeliveryRepo: WebhookDeliveryRepository;
+  let bounceRepo: BounceRepository;
+  let migrationRepo: MigrationJobRepository;
   let service: RetentionService;
 
   function insertSendJob(status: SendJobStatus, completedAt: Date | null): string {
@@ -68,12 +79,58 @@ describe('RetentionService', () => {
     return id;
   }
 
+  function insertBounce(createdAt: Date): string {
+    const id = randomUUID();
+    const row: BounceEventRow = {
+      id,
+      sendJobId: null,
+      recipient: 'x@y.com',
+      type: 'bounce',
+      classification: 'hard',
+      statusCode: '5.1.1',
+      diagnostic: 'no such user',
+      originalMessageId: null,
+      createdAt,
+    };
+    client.db.insert(bounceEvents).values(row).run();
+    return id;
+  }
+
+  function insertMigration(status: MigrationStatus, completedAt: Date | null): string {
+    const id = randomUUID();
+    const row: MigrationJobRow = {
+      id,
+      sourceHost: 'imap.example.com',
+      sourcePort: 993,
+      sourceUser: 'u',
+      sourceSsl: 'imaps',
+      sourcePasswordEnc: null,
+      destAddress: 'd@example.com',
+      status,
+      log: 'x'.repeat(1000),
+      error: null,
+      createdAt: OLD,
+      startedAt: null,
+      completedAt,
+    };
+    client.db.insert(migrationJobs).values(row).run();
+    return id;
+  }
+
   beforeEach(() => {
     client = createDb(':memory:');
     migrateDatabase(client.sqlite);
     sendJobRepo = new SendJobRepository(client.db);
     webhookDeliveryRepo = new WebhookDeliveryRepository(client.db);
-    service = new RetentionService(sendJobRepo, webhookDeliveryRepo, silentLogger);
+    bounceRepo = new BounceRepository(client.db);
+    migrationRepo = new MigrationJobRepository(client.db);
+    service = new RetentionService(
+      sendJobRepo,
+      webhookDeliveryRepo,
+      bounceRepo,
+      migrationRepo,
+      silentLogger,
+    );
   });
 
   afterEach(() => {
@@ -90,32 +147,63 @@ describe('RetentionService', () => {
     const recentDeliveryDone = insertWebhookDelivery('done', RECENT);
     const pendingDelivery = insertWebhookDelivery('pending', null);
 
+    const oldBounce = insertBounce(OLD);
+    const recentBounce = insertBounce(RECENT);
+
+    const oldMigrationDone = insertMigration('done', OLD);
+    const oldMigrationFailed = insertMigration('failed', OLD);
+    const recentMigrationDone = insertMigration('done', RECENT);
+    const pendingMigration = insertMigration('pending', null);
+
     const result = service.prune(30, NOW);
 
-    expect(result).toEqual({ sendJobs: 2, webhookDeliveries: 1 });
+    expect(result).toEqual({
+      sendJobs: 2,
+      webhookDeliveries: 1,
+      bounceEvents: 1,
+      migrationJobs: 2,
+    });
 
-    // Old finished send jobs gone
+    // Old finished send jobs gone; recent + pending kept.
     expect(sendJobRepo.findById(oldDone)).toBeUndefined();
     expect(sendJobRepo.findById(oldDead)).toBeUndefined();
-    // Recent + pending kept
     expect(sendJobRepo.findById(recentDone)).toBeDefined();
     expect(sendJobRepo.findById(pending)).toBeDefined();
 
-    // Old finished delivery gone
+    // Old finished delivery gone; recent + pending kept.
     expect(webhookDeliveryRepo.findById(oldDeliveryDone)).toBeUndefined();
-    // Recent + pending kept
     expect(webhookDeliveryRepo.findById(recentDeliveryDone)).toBeDefined();
     expect(webhookDeliveryRepo.findById(pendingDelivery)).toBeDefined();
+
+    // Old bounce gone; recent kept.
+    expect(bounceRepo.list().map((b) => b.id)).toEqual([recentBounce]);
+    expect(oldBounce).toBeDefined();
+
+    // Old terminal migrations gone; recent + pending kept.
+    expect(migrationRepo.findById(oldMigrationDone)).toBeUndefined();
+    expect(migrationRepo.findById(oldMigrationFailed)).toBeUndefined();
+    expect(migrationRepo.findById(recentMigrationDone)).toBeDefined();
+    expect(migrationRepo.findById(pendingMigration)).toBeDefined();
   });
 
   it('is a no-op when retentionDays <= 0', () => {
     const oldDone = insertSendJob('done', OLD);
     const oldDeliveryDone = insertWebhookDelivery('done', OLD);
+    const oldBounce = insertBounce(OLD);
+    const oldMigration = insertMigration('done', OLD);
 
     const result = service.prune(0, NOW);
 
-    expect(result).toEqual({ sendJobs: 0, webhookDeliveries: 0 });
+    expect(result).toEqual({
+      sendJobs: 0,
+      webhookDeliveries: 0,
+      bounceEvents: 0,
+      migrationJobs: 0,
+    });
     expect(sendJobRepo.findById(oldDone)).toBeDefined();
     expect(webhookDeliveryRepo.findById(oldDeliveryDone)).toBeDefined();
+    expect(bounceRepo.list()).toHaveLength(1);
+    expect(oldBounce).toBeDefined();
+    expect(migrationRepo.findById(oldMigration)).toBeDefined();
   });
 });
