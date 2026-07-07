@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MailboxDTO, QuarantineBoxDTO } from '@contracts';
 import { api } from '../api';
@@ -8,7 +9,20 @@ import { useT } from '../i18n';
 export function QuarantinePage() {
   const t = useT();
   const queryClient = useQueryClient();
-  const [mailboxId, setMailboxId] = useState('');
+  // The mailbox filter lives in the URL so deep links (e.g. from a mailbox's
+  // settings page, ?mailboxId=…) preselect it and the view is shareable.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mailboxId = searchParams.get('mailboxId') ?? '';
+  const setMailboxId = (id: string) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id) next.set('mailboxId', id);
+        else next.delete('mailboxId');
+        return next;
+      },
+      { replace: true },
+    );
   const [status, setStatus] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
 
   const mailboxes = useQuery({
