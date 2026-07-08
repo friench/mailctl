@@ -20,14 +20,20 @@ type ToolResult = {
 };
 
 function ok(data: unknown): ToolResult {
-  const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+  // Compact JSON: pretty-printing floods the model context (e.g. list_quarantine
+  // across every mailbox). The client can parse it fine.
+  const text = typeof data === 'string' ? data : JSON.stringify(data);
   return { content: [{ type: 'text', text }] };
 }
 
 function fail(err: unknown): ToolResult {
   if (err instanceof MailApiError) {
+    // Include the response body: backend 400s carry `{ error, issues: [...] }`
+    // with per-field validation detail the model needs to self-correct.
+    const detail =
+      err.body && typeof err.body === 'object' ? `\n${JSON.stringify(err.body)}` : '';
     return {
-      content: [{ type: 'text', text: `mail-api error ${err.status}: ${err.message}` }],
+      content: [{ type: 'text', text: `mail-api error ${err.status}: ${err.message}${detail}` }],
       isError: true,
     };
   }
@@ -36,6 +42,17 @@ function fail(err: unknown): ToolResult {
     isError: true,
   };
 }
+
+/** Webhook event names accepted by the backend subscription validator. */
+const WEBHOOK_EVENTS = [
+  'send.completed',
+  'send.failed',
+  'send.bounced',
+  'mailbox.created',
+  'mailbox.deleted',
+  'webhook.test',
+  'sync.divergence_detected',
+] as const;
 
 interface ToolMeta {
   title: string;
@@ -137,8 +154,9 @@ register(
 register(
   'dns_check',
   { title: 'DNS check', description: 'Check SPF/DKIM/DMARC/MX/A DNS records for a domain.', readOnly: true },
-  { id: z.string() },
-  ({ id }) => client.get(`/admin/api/domains/${seg(id)}/dns-check`),
+  { id: z.string(), refresh: z.boolean().optional().describe('Bypass the cache and re-resolve') },
+  ({ id, refresh }) =>
+    client.get(`/admin/api/domains/${seg(id)}/dns-check${refresh ? '?refresh=1' : ''}`),
 );
 
 // ---- mailboxes ----
@@ -186,6 +204,33 @@ register(
 );
 
 register(
+  'update_alias',
+  { title: 'Update alias', description: 'Retarget an alias (PATCH /admin/api/aliases/:id).' },
+  {
+    id: z.string(),
+    target: z.string().optional().describe('Target address(es), comma-separated'),
+    notes: z.string().nullable().optional(),
+  },
+  ({ id, ...body }) => client.patch(`/admin/api/aliases/${seg(id)}`, body),
+);
+
+register(
+  'generate_temp_alias',
+  {
+    title: 'Generate temp alias',
+    description:
+      'Create a random disposable alias (tmp-<hex>@domain) → target, with an optional TTL (POST /admin/api/aliases/temp).',
+  },
+  {
+    domain: z.string(),
+    target: z.string().describe('Target address(es), comma-separated'),
+    ttlHours: z.number().int().positive().max(8760).optional(),
+    notes: z.string().nullable().optional(),
+  },
+  (body) => client.post('/admin/api/aliases/temp', body),
+);
+
+register(
   'delete_alias',
   { title: 'Delete alias', description: 'Delete an alias from DMS + DB.', destructive: true },
   { id: z.string() },
@@ -228,6 +273,17 @@ register(
   ({ id }) => client.delete(`/admin/api/access-rules/${seg(id)}`),
 );
 
+register(
+  'regenerate_access_rules',
+  {
+    title: 'Regenerate access maps',
+    description:
+      'Re-render all access rules into the Postfix maps + Rspamd multimaps (POST /admin/api/access-rules/regenerate). Use to recover if the maps drift.',
+  },
+  {},
+  () => client.post('/admin/api/access-rules/regenerate'),
+);
+
 // ---- smtp accounts ----
 register(
   'list_smtp_accounts',
@@ -260,6 +316,13 @@ register(
     domainId: z.string().optional(),
   },
   (body) => client.post('/admin/api/smtp-accounts', body),
+);
+
+register(
+  'get_smtp_account',
+  { title: 'Get SMTP account', description: 'Get one SMTP account (GET /admin/api/smtp-accounts/:id).', readOnly: true },
+  { id: z.string() },
+  ({ id }) => client.get(`/admin/api/smtp-accounts/${seg(id)}`),
 );
 
 register(
@@ -302,8 +365,20 @@ register(
 register(
   'create_webhook',
   { title: 'Create webhook', description: 'Create a webhook subscription; the signing secret is returned ONCE.' },
-  { name: z.string(), url: z.string(), events: z.array(z.string()), active: z.boolean().optional() },
+  {
+    name: z.string(),
+    url: z.string(),
+    events: z.array(z.enum(WEBHOOK_EVENTS)).min(1),
+    active: z.boolean().optional(),
+  },
   (body) => client.post('/admin/api/webhooks', body),
+);
+
+register(
+  'get_webhook',
+  { title: 'Get webhook', description: 'Get one webhook (GET /admin/api/webhooks/:id).', readOnly: true },
+  { id: z.string() },
+  ({ id }) => client.get(`/admin/api/webhooks/${seg(id)}`),
 );
 
 register(
@@ -333,6 +408,16 @@ register(
   { title: 'Set feature flag', description: 'Enable or disable a feature flag.' },
   { key: z.string(), enabled: z.boolean() },
   ({ key, enabled }) => client.patch(`/admin/api/feature-flags/${seg(key)}`, { enabled }),
+);
+
+register(
+  'reset_feature_flag',
+  {
+    title: 'Reset feature flag',
+    description: 'Reset a feature flag to its built-in default (DELETE /admin/api/feature-flags/:key).',
+  },
+  { key: z.string() },
+  ({ key }) => client.delete(`/admin/api/feature-flags/${seg(key)}`),
 );
 
 // ---- DMS↔DB sync ----
@@ -489,6 +574,17 @@ register(
   (body) => client.post('/admin/api/migrations', body),
 );
 
+register(
+  'delete_migration',
+  {
+    title: 'Delete migration',
+    description: 'Delete a migration job and its log (DELETE /admin/api/migrations/:id).',
+    destructive: true,
+  },
+  { id: z.string() },
+  ({ id }) => client.delete(`/admin/api/migrations/${seg(id)}`),
+);
+
 // ---- inbound fetching (fetchmail) ----
 register(
   'list_fetchmail',
@@ -519,6 +615,28 @@ register(
     keep: z.boolean().optional(),
   },
   (body) => client.post('/admin/api/fetchmail', body),
+);
+
+register(
+  'update_fetchmail',
+  {
+    title: 'Update fetchmail account',
+    description:
+      'Update or pause an inbound-fetch account (PATCH /admin/api/fetchmail/:id). Set active:false to stop polling without deleting it.',
+  },
+  {
+    id: z.string(),
+    pollServer: z.string().optional(),
+    protocol: z.enum(['imap', 'pop3']).optional(),
+    port: z.number().int().min(1).max(65535).nullable().optional(),
+    username: z.string().optional(),
+    password: z.string().optional(),
+    destAddress: z.string().optional(),
+    ssl: z.boolean().optional(),
+    keep: z.boolean().optional(),
+    active: z.boolean().optional(),
+  },
+  ({ id, ...body }) => client.patch(`/admin/api/fetchmail/${seg(id)}`, body),
 );
 
 register(
@@ -730,10 +848,39 @@ register(
 );
 
 register(
+  'get_quarantine_message',
+  {
+    title: 'Get quarantined message',
+    description:
+      'Fetch the raw text of a quarantined message so you can inspect it before releasing/deleting (GET /admin/api/quarantine/:mailboxId/:uid).',
+    readOnly: true,
+  },
+  { mailboxId: z.string(), uid: z.number().int() },
+  ({ mailboxId, uid }) => client.get(`/admin/api/quarantine/${seg(mailboxId)}/${uid}`),
+);
+
+register(
   'delete_quarantine',
   { title: 'Delete quarantine', description: 'Permanently delete a quarantined message.', destructive: true },
   { mailboxId: z.string(), uid: z.number().int() },
   ({ mailboxId, uid }) => client.delete(`/admin/api/quarantine/${seg(mailboxId)}/${uid}`),
+);
+
+register(
+  'bulk_quarantine',
+  {
+    title: 'Bulk quarantine action',
+    description:
+      'Release or delete many quarantined messages in one call (POST /admin/api/quarantine/:mailboxId/actions).',
+    destructive: true,
+  },
+  {
+    mailboxId: z.string(),
+    uids: z.array(z.number().int()).min(1),
+    action: z.enum(['release', 'delete']),
+  },
+  ({ mailboxId, ...body }) =>
+    client.post(`/admin/api/quarantine/${seg(mailboxId)}/actions`, body),
 );
 
 // ---- users ----
@@ -771,6 +918,13 @@ register(
 );
 
 register(
+  'set_user_password',
+  { title: 'Set user password', description: 'Reset a dashboard user password (PATCH /admin/api/users/:id/password).' },
+  { id: z.string(), password: z.string() },
+  ({ id, password }) => client.patch(`/admin/api/users/${seg(id)}/password`, { password }),
+);
+
+register(
   'delete_user',
   { title: 'Delete user', description: 'Delete a dashboard user.', destructive: true },
   { id: z.string() },
@@ -793,6 +947,10 @@ register(
     priority: z.number().int().optional(),
     fromAddress: z.string().optional(),
     fromName: z.string().nullable().optional(),
+    userEnvVar: z.string().optional(),
+    passwordEnvVar: z.string().optional(),
+    active: z.boolean().optional().describe('Deactivate to stop using this account without deleting it'),
+    domainId: z.string().nullable().optional(),
   },
   ({ id, ...body }) => client.patch(`/admin/api/smtp-accounts/${seg(id)}`, body),
 );
@@ -814,7 +972,7 @@ register(
     id: z.string(),
     name: z.string().optional(),
     url: z.string().optional(),
-    events: z.array(z.string()).optional(),
+    events: z.array(z.enum(WEBHOOK_EVENTS)).min(1).optional(),
     active: z.boolean().optional(),
   },
   ({ id, ...body }) => client.patch(`/admin/api/webhooks/${seg(id)}`, body),
@@ -855,6 +1013,17 @@ register(
   },
   {},
   () => client.get('/admin/api/stats'),
+);
+
+register(
+  'get_settings',
+  {
+    title: 'Get settings',
+    description: 'Panel / self-service settings (GET /admin/api/settings).',
+    readOnly: true,
+  },
+  {},
+  () => client.get('/admin/api/settings'),
 );
 
 async function main(): Promise<void> {

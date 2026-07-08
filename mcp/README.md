@@ -61,26 +61,26 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-## Tools (70)
+## Tools (82)
 
 - **Send:** `send_email`, `get_send_job`, `list_send_jobs`
 - **Domains:** `list_domains`, `get_domain`, `create_domain`, `update_domain`, `delete_domain`, `generate_dkim`, `dns_check`
 - **Mailboxes:** `list_mailboxes`, `get_mailbox`, `create_mailbox`, `update_mailbox`, `set_mailbox_password`, `delete_mailbox`, `get_mailbox_sieve`, `set_mailbox_sieve`
-- **Aliases:** `list_aliases`, `create_alias`, `delete_alias`
-- **Quarantine:** `list_quarantine`, `release_quarantine`, `delete_quarantine`
+- **Aliases:** `list_aliases`, `create_alias`, `update_alias`, `generate_temp_alias`, `delete_alias`
+- **Quarantine:** `list_quarantine`, `get_quarantine_message`, `release_quarantine`, `delete_quarantine`, `bulk_quarantine`
 - **Suppression:** `list_suppressions`, `add_suppression`, `remove_suppression`
 - **Bounces:** `list_bounces`, `ingest_bounce`
-- **Access lists:** `list_access_rules`, `create_access_rule`, `delete_access_rule`
-- **SMTP accounts:** `list_smtp_accounts`, `create_smtp_account`, `update_smtp_account`, `delete_smtp_account`
+- **Access lists:** `list_access_rules`, `create_access_rule`, `delete_access_rule`, `regenerate_access_rules`
+- **SMTP accounts:** `list_smtp_accounts`, `get_smtp_account`, `create_smtp_account`, `update_smtp_account`, `delete_smtp_account`
 - **API keys:** `list_api_keys`, `create_api_key`, `set_api_key_policy`, `revoke_api_key`
-- **Webhooks:** `list_webhooks`, `create_webhook`, `update_webhook`, `test_webhook`, `list_webhook_deliveries`, `delete_webhook`
-- **Users:** `list_users`, `create_user`, `set_user_role`, `delete_user`
+- **Webhooks:** `list_webhooks`, `get_webhook`, `create_webhook`, `update_webhook`, `test_webhook`, `list_webhook_deliveries`, `delete_webhook`
+- **Users:** `list_users`, `create_user`, `set_user_role`, `set_user_password`, `delete_user`
 - **Provisioning:** `import_bulk`
-- **Migrations:** `list_migrations`, `get_migration`, `create_migration`
-- **Fetchmail:** `list_fetchmail`, `create_fetchmail`, `delete_fetchmail`
-- **Observability:** `get_engine_overview`, `restart_container`, `get_mail_logs`, `get_mail_queue`, `get_sessions`, `get_stats`
+- **Migrations:** `list_migrations`, `get_migration`, `create_migration`, `delete_migration`
+- **Fetchmail:** `list_fetchmail`, `create_fetchmail`, `update_fetchmail`, `delete_fetchmail`
+- **Observability:** `get_engine_overview`, `restart_container`, `get_mail_logs`, `get_mail_queue`, `get_sessions`, `get_stats`, `get_settings`
 - **Backups:** `list_backups`, `create_backup`
-- **Feature flags:** `list_feature_flags`, `set_feature_flag`
+- **Feature flags:** `list_feature_flags`, `set_feature_flag`, `reset_feature_flag`
 - **DMS↔DB sync:** `sync_preview`, `sync_status`, `sync_apply`
 
 Read-only tools are marked `readOnlyHint`; destructive ones (`delete_*`, `revoke_*`,
