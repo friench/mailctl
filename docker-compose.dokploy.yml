@@ -98,12 +98,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - docker_proxy
-    read_only: true
-    tmpfs:
-      - /run
-      # docker-socket-proxy (haproxy) regenerates its config here on startup;
-      # read_only rootfs would otherwise EROFS on /usr/local/etc/haproxy/haproxy.cfg.
-      - /usr/local/etc/haproxy
+    # No read_only rootfs: tecnativa/docker-socket-proxy 0.3.0 (haproxy) reads
+    # /usr/local/etc/haproxy/haproxy.cfg.template and writes haproxy.cfg in the
+    # same dir at startup — a read-only rootfs (or a tmpfs over that dir, which
+    # hides the template) crash-loops it. Least-privilege is kept via the env
+    # allow-list + the internal docker_proxy network.
 
   mail-api:
     build:
