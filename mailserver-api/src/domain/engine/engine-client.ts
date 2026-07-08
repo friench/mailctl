@@ -1,6 +1,6 @@
 import Docker from 'dockerode';
-import { PassThrough } from 'node:stream';
 import type { Logger } from '../../logger';
+import { execInContainer } from '../../lib/docker-exec';
 import {
   parseDmsSettings,
   parseDoveadmStats,
@@ -90,32 +90,16 @@ export class DockerodeEngineClient implements EngineClient {
   /** Exec a command in the DMS container; returns stdout, or null on failure. */
   private async execOrNull(cmd: string[]): Promise<string | null> {
     try {
-      const container = this.docker.getContainer(this.dmsContainerName);
-      const exec = await container.exec({ Cmd: cmd, AttachStdout: true, AttachStderr: true });
-      const stream = await exec.start({ hijack: true, stdin: false });
-
-      const stdoutBuf: Buffer[] = [];
-      const stderrBuf: Buffer[] = [];
-      const stdout = new PassThrough();
-      const stderr = new PassThrough();
-      stdout.on('data', (c: Buffer) => stdoutBuf.push(c));
-      stderr.on('data', (c: Buffer) => stderrBuf.push(c));
-      this.docker.modem.demuxStream(stream, stdout, stderr);
-
-      await new Promise<void>((resolve, reject) => {
-        stream.on('end', () => resolve());
-        stream.on('error', reject);
-      });
-
-      const inspect = await exec.inspect();
-      if (inspect.ExitCode !== 0) {
-        this.logger?.debug(
-          { cmd, exitCode: inspect.ExitCode, stderr: Buffer.concat(stderrBuf).toString('utf-8') },
-          'engine exec non-zero',
-        );
+      const { exitCode, stdout, stderr } = await execInContainer(
+        this.docker,
+        this.dmsContainerName,
+        cmd,
+      );
+      if (exitCode !== 0) {
+        this.logger?.debug({ cmd, exitCode, stderr }, 'engine exec non-zero');
         return null;
       }
-      return Buffer.concat(stdoutBuf).toString('utf-8');
+      return stdout;
     } catch (err) {
       this.logger?.debug({ cmd, err }, 'engine exec failed');
       return null;

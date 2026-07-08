@@ -235,6 +235,8 @@ export const bounceEvents = sqliteTable(
   (table) => ({
     recipientIdx: index('bounce_events_recipient_idx').on(table.recipient),
     sendJobIdIdx: index('bounce_events_send_job_id_idx').on(table.sendJobId),
+    // Backs the `ORDER BY created_at DESC` list and the retention prune.
+    createdAtIdx: index('bounce_events_created_at_idx').on(table.createdAt),
   }),
 );
 
@@ -332,6 +334,8 @@ export const sendJobs = sqliteTable(
     pendingReadyIdx: index('send_jobs_pending_ready_idx').on(table.status, table.nextAttemptAt),
     apiKeyIdIdx: index('send_jobs_api_key_id_idx').on(table.apiKeyId),
     statusCompletedIdx: index('send_jobs_status_completed_idx').on(table.status, table.completedAt),
+    // Bounce ingest correlates DSNs back to jobs via messageId on every request.
+    messageIdIdx: index('send_jobs_message_id_idx').on(table.messageId),
   }),
 );
 

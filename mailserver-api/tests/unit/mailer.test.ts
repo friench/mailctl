@@ -4,6 +4,7 @@ vi.mock('nodemailer');
 
 import * as nodemailer from 'nodemailer';
 import { MailSender } from '../../src/domain/send/mailer';
+import { PermanentSendError } from '../../src/domain/send/types';
 import { createLogger } from '../../src/logger';
 import type { ResolvedSmtpAccount } from '../../src/domain/smtp-accounts/loader';
 
@@ -117,6 +118,29 @@ describe('MailSender', () => {
 
     await expect(m.send({ to: 'to@x.com', subject: 's', html: 'h' })).rejects.toThrow(
       /All SMTP accounts failed/,
+    );
+  });
+
+  it('short-circuits (no retry, no failover) on a permanent 5xx and throws PermanentSendError', async () => {
+    const m = new MailSender([resolved('a'), resolved('b')], logger);
+    const err = Object.assign(new Error('550 no such user'), { responseCode: 550 });
+    transports.get('a.example.com:587')!.sendMail.mockRejectedValue(err);
+    transports.get('b.example.com:587')!.sendMail.mockResolvedValue({ messageId: '<id>' });
+
+    await expect(m.send({ to: 'to@x.com', subject: 's', html: 'h' })).rejects.toBeInstanceOf(
+      PermanentSendError,
+    );
+    // One attempt on a, no within-account retry, no failover to b.
+    expect(transports.get('a.example.com:587')!.sendMail).toHaveBeenCalledTimes(1);
+    expect(transports.get('b.example.com:587')!.sendMail).not.toHaveBeenCalled();
+  });
+
+  it('preserves the last underlying error when all accounts fail', async () => {
+    const m = new MailSender([resolved('a')], logger);
+    transports.get('a.example.com:587')!.sendMail.mockRejectedValue(new Error('boom-xyz'));
+
+    await expect(m.send({ to: 'to@x.com', subject: 's', html: 'h' })).rejects.toThrow(
+      /last: boom-xyz/,
     );
   });
 

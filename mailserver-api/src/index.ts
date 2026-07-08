@@ -169,8 +169,9 @@ const opsService = new OpsService(
 
 const secretBox = makeSecretBox(env.SESSION_SECRET);
 
+const migrationRepo = new MigrationJobRepository(dbClient.db);
 const migrationService = new MigrationService(
-  new MigrationJobRepository(dbClient.db),
+  migrationRepo,
   new DoveadmMigrator({
     dockerOptions,
     dmsContainerName: env.DMS_CONTAINER_NAME,
@@ -258,8 +259,9 @@ sendJobService.recoverStuckJobs();
 
 const suppressionService = new SuppressionService(new SuppressionRepository(dbClient.db), logger);
 
+const bounceRepo = new BounceRepository(dbClient.db);
 const bounceService = new BounceService(
-  new BounceRepository(dbClient.db),
+  bounceRepo,
   sendJobRepo,
   logger,
   webhookService,
@@ -284,7 +286,13 @@ const backupService = new BackupService(dbClient.sqlite, {
   logger,
 });
 
-const retentionService = new RetentionService(sendJobRepo, webhookDeliveryRepo, logger);
+const retentionService = new RetentionService(
+  sendJobRepo,
+  webhookDeliveryRepo,
+  bounceRepo,
+  migrationRepo,
+  logger,
+);
 
 const statsService = new StatsService(dbClient.db);
 

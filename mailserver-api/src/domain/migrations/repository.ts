@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { Db } from '../../db/client';
 import { migrationJobs, type ImapSslMode, type MigrationJobRow } from '../../db/schema';
@@ -100,5 +100,21 @@ export class MigrationJobRepository {
   delete(id: string): boolean {
     const info = this.db.delete(migrationJobs).where(eq(migrationJobs.id, id)).run();
     return info.changes > 0;
+  }
+
+  /**
+   * Delete terminal (done/failed) jobs completed before `cutoff`. Their `log`
+   * column holds full dsync output, so unbounded retention grows the DB.
+   */
+  deleteFinishedBefore(cutoff: Date): number {
+    return this.db
+      .delete(migrationJobs)
+      .where(
+        and(
+          inArray(migrationJobs.status, ['done', 'failed']),
+          lt(migrationJobs.completedAt, cutoff),
+        ),
+      )
+      .run().changes;
   }
 }

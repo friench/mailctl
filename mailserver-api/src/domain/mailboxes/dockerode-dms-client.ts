@@ -1,6 +1,6 @@
 import Docker from 'dockerode';
-import { PassThrough } from 'node:stream';
 import type { Logger } from '../../logger';
+import { execInContainer } from '../../lib/docker-exec';
 import { parseDkimFile } from '../../lib/dkim-parser';
 import { parsePostfixVirtual } from '../../lib/postfix-virtual-parser';
 import { parseDovecotQuotas } from '../../lib/dovecot-quotas-parser';
@@ -330,80 +330,32 @@ export class DockerodeDmsClient implements DmsClient {
     cmd: string[],
     input: string,
   ): Promise<{ stdout: string; stderr: string }> {
-    const container = this.docker.getContainer(this.containerName);
-    const exec = await container.exec({
-      Cmd: cmd,
-      AttachStdin: true,
-      AttachStdout: true,
-      AttachStderr: true,
-    });
-
-    const stream = await exec.start({ hijack: true, stdin: true });
-
-    const stdoutBuf: Buffer[] = [];
-    const stderrBuf: Buffer[] = [];
-    const stdout = new PassThrough();
-    const stderr = new PassThrough();
-    stdout.on('data', (c: Buffer) => stdoutBuf.push(c));
-    stderr.on('data', (c: Buffer) => stderrBuf.push(c));
-    this.docker.modem.demuxStream(stream, stdout, stderr);
-
-    stream.write(input);
-    stream.end();
-
-    await new Promise<void>((resolve, reject) => {
-      stream.on('end', () => resolve());
-      stream.on('error', reject);
-    });
-
-    const inspect = await exec.inspect();
-    const out = Buffer.concat(stdoutBuf).toString('utf-8');
-    const err = Buffer.concat(stderrBuf).toString('utf-8');
-    if (inspect.ExitCode !== 0) {
-      this.logger?.warn(
-        { cmd, exitCode: inspect.ExitCode, stderr: err },
-        'DMS exec (stdin) failed',
-      );
-      throw new Error(`${cmd[0]} exited ${inspect.ExitCode}: ${err.trim() || out.trim()}`);
+    const { exitCode, stdout, stderr } = await execInContainer(
+      this.docker,
+      this.containerName,
+      cmd,
+      {
+        stdin: input,
+      },
+    );
+    if (exitCode !== 0) {
+      this.logger?.warn({ cmd, exitCode, stderr }, 'DMS exec (stdin) failed');
+      throw new Error(`${cmd[0]} exited ${exitCode}: ${stderr.trim() || stdout.trim()}`);
     }
-    return { stdout: out, stderr: err };
+    return { stdout, stderr };
   }
 
   private async runRaw(cmd: string[]): Promise<{ stdout: string; stderr: string }> {
-    const container = this.docker.getContainer(this.containerName);
-    const exec = await container.exec({
-      Cmd: cmd,
-      AttachStdout: true,
-      AttachStderr: true,
-    });
-
-    const stream = await exec.start({ hijack: true, stdin: false });
-
-    const stdoutBuf: Buffer[] = [];
-    const stderrBuf: Buffer[] = [];
-
-    const stdout = new PassThrough();
-    const stderr = new PassThrough();
-    stdout.on('data', (c: Buffer) => stdoutBuf.push(c));
-    stderr.on('data', (c: Buffer) => stderrBuf.push(c));
-
-    this.docker.modem.demuxStream(stream, stdout, stderr);
-
-    await new Promise<void>((resolve, reject) => {
-      stream.on('end', () => resolve());
-      stream.on('error', reject);
-    });
-
-    const inspect = await exec.inspect();
-    const out = Buffer.concat(stdoutBuf).toString('utf-8');
-    const err = Buffer.concat(stderrBuf).toString('utf-8');
-
-    if (inspect.ExitCode !== 0) {
-      const message = `${cmd[0]} ${cmd[1] ?? ''} exited ${inspect.ExitCode}: ${err.trim() || out.trim()}`;
-      this.logger?.warn({ cmd, exitCode: inspect.ExitCode, stderr: err }, 'DMS exec failed');
+    const { exitCode, stdout, stderr } = await execInContainer(
+      this.docker,
+      this.containerName,
+      cmd,
+    );
+    if (exitCode !== 0) {
+      const message = `${cmd[0]} ${cmd[1] ?? ''} exited ${exitCode}: ${stderr.trim() || stdout.trim()}`;
+      this.logger?.warn({ cmd, exitCode, stderr }, 'DMS exec failed');
       throw new Error(message);
     }
-
-    return { stdout: out, stderr: err };
+    return { stdout, stderr };
   }
 }
