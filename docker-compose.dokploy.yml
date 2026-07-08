@@ -101,6 +101,9 @@ services:
     read_only: true
     tmpfs:
       - /run
+      # docker-socket-proxy (haproxy) regenerates its config here on startup;
+      # read_only rootfs would otherwise EROFS on /usr/local/etc/haproxy/haproxy.cfg.
+      - /usr/local/etc/haproxy
 
   mail-api:
     build:
