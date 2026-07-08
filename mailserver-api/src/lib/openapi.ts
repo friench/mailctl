@@ -1,19 +1,36 @@
 import { z, type ZodType } from 'zod';
 import { sendBodySchema } from '../http/validators/send';
 import { loginSchema } from '../http/validators/auth';
-import { createDomainSchema } from '../http/validators/domains';
-import { createMailboxSchema } from '../http/validators/mailboxes';
-import { createAliasSchema } from '../http/validators/aliases';
+import {
+  createDomainSchema,
+  updateDomainSchema,
+  regenerateDkimSchema,
+} from '../http/validators/domains';
+import {
+  createMailboxSchema,
+  updateMailboxSchema,
+  updatePasswordSchema,
+} from '../http/validators/mailboxes';
+import {
+  createAliasSchema,
+  updateAliasSchema,
+  generateTempAliasSchema,
+} from '../http/validators/aliases';
 import { createApiKeySchema, updateApiKeySchema } from '../http/validators/apikeys';
 import { createSuppressionSchema } from '../http/validators/suppressions';
 import { createAccessRuleSchema } from '../http/validators/access-lists';
-import { createFetchmailSchema } from '../http/validators/fetchmail';
+import { createFetchmailSchema, updateFetchmailSchema } from '../http/validators/fetchmail';
 import { createMigrationSchema } from '../http/validators/migrations';
-import { createSmtpAccountSchema } from '../http/validators/smtp-accounts';
-import { createWebhookSchema } from '../http/validators/webhooks';
+import { createSmtpAccountSchema, updateSmtpAccountSchema } from '../http/validators/smtp-accounts';
+import { createWebhookSchema, updateWebhookSchema } from '../http/validators/webhooks';
 import { importDocumentSchema } from '../http/validators/import';
+import { sieveConfigSchema } from '../http/validators/sieve';
+import { applySyncSchema } from '../http/validators/sync';
+import { quarantineBulkSchema } from '../http/validators/quarantine';
+import { createUserSchema, updateUserSchema } from '../http/validators/users';
+import { setFlagSchema } from '../http/validators/feature-flags';
 
-type HttpMethod = 'get' | 'post' | 'patch' | 'delete';
+type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 type Security = 'apiKey' | 'admin' | 'none';
 
 interface RouteDef {
@@ -352,6 +369,502 @@ const ROUTES: RouteDef[] = [
     tag: 'Observability',
     summary: 'Dashboard counters',
     security: 'admin',
+  },
+
+  // Domains (item-level).
+  {
+    method: 'get',
+    path: '/admin/api/domains/{id}',
+    tag: 'Domains',
+    summary: 'Get a domain',
+    security: 'admin',
+    params: ['id'],
+  },
+  {
+    method: 'patch',
+    path: '/admin/api/domains/{id}',
+    tag: 'Domains',
+    summary: 'Update a domain',
+    security: 'admin',
+    params: ['id'],
+    request: updateDomainSchema,
+  },
+  {
+    method: 'delete',
+    path: '/admin/api/domains/{id}',
+    tag: 'Domains',
+    summary: 'Delete a domain',
+    security: 'admin',
+    params: ['id'],
+    success: { status: 204, description: 'Deleted' },
+  },
+  {
+    method: 'post',
+    path: '/admin/api/domains/{id}/dkim',
+    tag: 'Domains',
+    summary: 'Generate/rotate the DKIM key',
+    security: 'admin',
+    params: ['id'],
+    request: regenerateDkimSchema,
+  },
+  {
+    method: 'get',
+    path: '/admin/api/domains/{id}/dns-check',
+    tag: 'Domains',
+    summary: 'Check DNS records (MX/SPF/DKIM/DMARC)',
+    security: 'admin',
+    params: ['id'],
+  },
+
+  // Mailboxes (item-level).
+  {
+    method: 'get',
+    path: '/admin/api/mailboxes/{id}',
+    tag: 'Mailboxes',
+    summary: 'Get a mailbox',
+    security: 'admin',
+    params: ['id'],
+  },
+  {
+    method: 'patch',
+    path: '/admin/api/mailboxes/{id}',
+    tag: 'Mailboxes',
+    summary: 'Update a mailbox',
+    security: 'admin',
+    params: ['id'],
+    request: updateMailboxSchema,
+  },
+  {
+    method: 'delete',
+    path: '/admin/api/mailboxes/{id}',
+    tag: 'Mailboxes',
+    summary: 'Delete a mailbox',
+    security: 'admin',
+    params: ['id'],
+    success: { status: 204, description: 'Deleted' },
+  },
+  {
+    method: 'patch',
+    path: '/admin/api/mailboxes/{id}/password',
+    tag: 'Mailboxes',
+    summary: 'Change a mailbox password',
+    security: 'admin',
+    params: ['id'],
+    request: updatePasswordSchema,
+  },
+  {
+    method: 'get',
+    path: '/admin/api/mailboxes/{id}/sieve',
+    tag: 'Mailboxes',
+    summary: 'Get the mailbox Sieve script',
+    security: 'admin',
+    params: ['id'],
+  },
+  {
+    method: 'put',
+    path: '/admin/api/mailboxes/{id}/sieve',
+    tag: 'Mailboxes',
+    summary: 'Replace the mailbox Sieve script',
+    security: 'admin',
+    params: ['id'],
+    request: sieveConfigSchema,
+  },
+
+  // Aliases (item-level + temp).
+  {
+    method: 'patch',
+    path: '/admin/api/aliases/{id}',
+    tag: 'Aliases',
+    summary: 'Retarget an alias',
+    security: 'admin',
+    params: ['id'],
+    request: updateAliasSchema,
+  },
+  {
+    method: 'delete',
+    path: '/admin/api/aliases/{id}',
+    tag: 'Aliases',
+    summary: 'Delete an alias',
+    security: 'admin',
+    params: ['id'],
+    success: { status: 204, description: 'Deleted' },
+  },
+  {
+    method: 'post',
+    path: '/admin/api/aliases/temp',
+    tag: 'Aliases',
+    summary: 'Generate a temporary alias',
+    security: 'admin',
+    request: generateTempAliasSchema,
+    success: { status: 201, description: 'Created' },
+  },
+
+  // Access lists (item-level + regenerate).
+  {
+    method: 'delete',
+    path: '/admin/api/access-rules/{id}',
+    tag: 'Access lists',
+    summary: 'Delete an allow/deny rule',
+    security: 'admin',
+    params: ['id'],
+    success: { status: 204, description: 'Deleted' },
+  },
+  {
+    method: 'post',
+    path: '/admin/api/access-rules/regenerate',
+    tag: 'Access lists',
+    summary: 'Re-render access maps into DMS',
+    security: 'admin',
+  },
+
+  // Fetchmail (item-level).
+  {
+    method: 'patch',
+    path: '/admin/api/fetchmail/{id}',
+    tag: 'Fetchmail',
+    summary: 'Update/toggle a fetch account',
+    security: 'admin',
+    params: ['id'],
+    request: updateFetchmailSchema,
+  },
+  {
+    method: 'delete',
+    path: '/admin/api/fetchmail/{id}',
+    tag: 'Fetchmail',
+    summary: 'Delete a fetch account',
+    security: 'admin',
+    params: ['id'],
+    success: { status: 204, description: 'Deleted' },
+  },
+
+  // Migrations (item-level).
+  {
+    method: 'get',
+    path: '/admin/api/migrations/{id}',
+    tag: 'Migrations',
+    summary: 'Get a migration job',
+    security: 'admin',
+    params: ['id'],
+  },
+  {
+    method: 'delete',
+    path: '/admin/api/migrations/{id}',
+    tag: 'Migrations',
+    summary: 'Delete a migration job',
+    security: 'admin',
+    params: ['id'],
+    success: { status: 204, description: 'Deleted' },
+  },
+
+  // SMTP accounts (item-level).
+  {
+    method: 'get',
+    path: '/admin/api/smtp-accounts/{id}',
+    tag: 'SMTP accounts',
+    summary: 'Get an SMTP account',
+    security: 'admin',
+    params: ['id'],
+  },
+  {
+    method: 'patch',
+    path: '/admin/api/smtp-accounts/{id}',
+    tag: 'SMTP accounts',
+    summary: 'Update an SMTP account',
+    security: 'admin',
+    params: ['id'],
+    request: updateSmtpAccountSchema,
+  },
+  {
+    method: 'delete',
+    path: '/admin/api/smtp-accounts/{id}',
+    tag: 'SMTP accounts',
+    summary: 'Delete an SMTP account',
+    security: 'admin',
+    params: ['id'],
+    success: { status: 204, description: 'Deleted' },
+  },
+
+  // Webhooks (item-level + deliveries + test).
+  {
+    method: 'get',
+    path: '/admin/api/webhooks/{id}',
+    tag: 'Webhooks',
+    summary: 'Get a webhook',
+    security: 'admin',
+    params: ['id'],
+  },
+  {
+    method: 'patch',
+    path: '/admin/api/webhooks/{id}',
+    tag: 'Webhooks',
+    summary: 'Update a webhook',
+    security: 'admin',
+    params: ['id'],
+    request: updateWebhookSchema,
+  },
+  {
+    method: 'delete',
+    path: '/admin/api/webhooks/{id}',
+    tag: 'Webhooks',
+    summary: 'Delete a webhook',
+    security: 'admin',
+    params: ['id'],
+    success: { status: 204, description: 'Deleted' },
+  },
+  {
+    method: 'get',
+    path: '/admin/api/webhooks/{id}/deliveries',
+    tag: 'Webhooks',
+    summary: 'List a webhook’s deliveries',
+    security: 'admin',
+    params: ['id'],
+  },
+  {
+    method: 'post',
+    path: '/admin/api/webhooks/{id}/test',
+    tag: 'Webhooks',
+    summary: 'Send a test event',
+    security: 'admin',
+    params: ['id'],
+  },
+
+  // Engine.
+  {
+    method: 'post',
+    path: '/admin/api/engine/containers/{name}/restart',
+    tag: 'Observability',
+    summary: 'Restart an allow-listed container',
+    security: 'admin',
+    params: ['name'],
+  },
+
+  // Sync.
+  {
+    method: 'get',
+    path: '/admin/api/sync/preview',
+    tag: 'Sync',
+    summary: 'Preview DMS↔DB divergence',
+    security: 'admin',
+  },
+  {
+    method: 'get',
+    path: '/admin/api/sync/status',
+    tag: 'Sync',
+    summary: 'Sync worker status',
+    security: 'admin',
+  },
+  {
+    method: 'post',
+    path: '/admin/api/sync/apply',
+    tag: 'Sync',
+    summary: 'Apply selected sync resolutions',
+    security: 'admin',
+    request: applySyncSchema,
+  },
+
+  // Quarantine.
+  {
+    method: 'get',
+    path: '/admin/api/quarantine',
+    tag: 'Quarantine',
+    summary: 'List quarantined spam (optionally by mailbox)',
+    security: 'admin',
+  },
+  {
+    method: 'get',
+    path: '/admin/api/quarantine/{mailboxId}/{uid}',
+    tag: 'Quarantine',
+    summary: 'Get a quarantined message (raw)',
+    security: 'admin',
+    params: ['mailboxId', 'uid'],
+  },
+  {
+    method: 'post',
+    path: '/admin/api/quarantine/{mailboxId}/{uid}/release',
+    tag: 'Quarantine',
+    summary: 'Release a message to the inbox',
+    security: 'admin',
+    params: ['mailboxId', 'uid'],
+  },
+  {
+    method: 'delete',
+    path: '/admin/api/quarantine/{mailboxId}/{uid}',
+    tag: 'Quarantine',
+    summary: 'Delete a quarantined message',
+    security: 'admin',
+    params: ['mailboxId', 'uid'],
+    success: { status: 204, description: 'Deleted' },
+  },
+  {
+    method: 'post',
+    path: '/admin/api/quarantine/{mailboxId}/actions',
+    tag: 'Quarantine',
+    summary: 'Bulk release/delete quarantined messages',
+    security: 'admin',
+    params: ['mailboxId'],
+    request: quarantineBulkSchema,
+  },
+
+  // Users.
+  {
+    method: 'get',
+    path: '/admin/api/users',
+    tag: 'Users',
+    summary: 'List dashboard users',
+    security: 'admin',
+  },
+  {
+    method: 'post',
+    path: '/admin/api/users',
+    tag: 'Users',
+    summary: 'Create a dashboard user',
+    security: 'admin',
+    request: createUserSchema,
+    success: { status: 201, description: 'Created' },
+  },
+  {
+    method: 'patch',
+    path: '/admin/api/users/{id}',
+    tag: 'Users',
+    summary: 'Update a user (role/domains)',
+    security: 'admin',
+    params: ['id'],
+    request: updateUserSchema,
+  },
+  {
+    method: 'delete',
+    path: '/admin/api/users/{id}',
+    tag: 'Users',
+    summary: 'Delete a user',
+    security: 'admin',
+    params: ['id'],
+    success: { status: 204, description: 'Deleted' },
+  },
+  {
+    method: 'patch',
+    path: '/admin/api/users/{id}/password',
+    tag: 'Users',
+    summary: 'Reset a user password',
+    security: 'admin',
+    params: ['id'],
+    request: updatePasswordSchema,
+  },
+
+  // Feature flags.
+  {
+    method: 'get',
+    path: '/admin/api/feature-flags',
+    tag: 'Feature flags',
+    summary: 'List feature flags',
+    security: 'admin',
+  },
+  {
+    method: 'patch',
+    path: '/admin/api/feature-flags/{key}',
+    tag: 'Feature flags',
+    summary: 'Set a feature flag',
+    security: 'admin',
+    params: ['key'],
+    request: setFlagSchema,
+  },
+  {
+    method: 'delete',
+    path: '/admin/api/feature-flags/{key}',
+    tag: 'Feature flags',
+    summary: 'Reset a flag to its default',
+    security: 'admin',
+    params: ['key'],
+    success: { status: 204, description: 'Reset' },
+  },
+
+  // Backups.
+  {
+    method: 'get',
+    path: '/admin/api/backups',
+    tag: 'Backups',
+    summary: 'List DB backups',
+    security: 'admin',
+  },
+  {
+    method: 'post',
+    path: '/admin/api/backups',
+    tag: 'Backups',
+    summary: 'Trigger a DB backup',
+    security: 'admin',
+    success: { status: 201, description: 'Created' },
+  },
+
+  // Settings.
+  {
+    method: 'get',
+    path: '/admin/api/settings',
+    tag: 'Settings',
+    summary: 'Public/self-service settings',
+    security: 'admin',
+  },
+
+  // Self-service (the signed-in user's own mailbox).
+  {
+    method: 'get',
+    path: '/admin/api/me',
+    tag: 'Self-service',
+    summary: 'Current user + mailbox',
+    security: 'admin',
+  },
+  {
+    method: 'get',
+    path: '/admin/api/me/sieve',
+    tag: 'Self-service',
+    summary: 'Get my Sieve script',
+    security: 'admin',
+  },
+  {
+    method: 'put',
+    path: '/admin/api/me/sieve',
+    tag: 'Self-service',
+    summary: 'Replace my Sieve script',
+    security: 'admin',
+    request: sieveConfigSchema,
+  },
+  {
+    method: 'patch',
+    path: '/admin/api/me/password',
+    tag: 'Self-service',
+    summary: 'Change my mailbox password',
+    security: 'admin',
+    request: updatePasswordSchema,
+  },
+  {
+    method: 'get',
+    path: '/admin/api/me/quarantine',
+    tag: 'Self-service',
+    summary: 'List my quarantined spam',
+    security: 'admin',
+  },
+  {
+    method: 'get',
+    path: '/admin/api/me/quarantine/{uid}',
+    tag: 'Self-service',
+    summary: 'Get one of my quarantined messages',
+    security: 'admin',
+    params: ['uid'],
+  },
+  {
+    method: 'post',
+    path: '/admin/api/me/quarantine/{uid}/release',
+    tag: 'Self-service',
+    summary: 'Release one of my quarantined messages',
+    security: 'admin',
+    params: ['uid'],
+  },
+  {
+    method: 'delete',
+    path: '/admin/api/me/quarantine/{uid}',
+    tag: 'Self-service',
+    summary: 'Delete one of my quarantined messages',
+    security: 'admin',
+    params: ['uid'],
+    success: { status: 204, description: 'Deleted' },
   },
 ];
 
