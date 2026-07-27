@@ -122,3 +122,250 @@ docker exec -it mailserver setup config dkim domain example.com
 | `DOCKER_HOST` | (unset) | When set (e.g. `tcp://docker-socket-proxy:2375`) all dockerode clients connect via the proxy instead of the raw socket. `lib/docker.ts` resolves the connection; the default compose wires a least-privilege `tecnativa/docker-socket-proxy`. |
 | `TRUST_PROXY` | `0` | Set to `1` when behind nginx so `req.ip` is correct |
 | `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` | (optional) | Bootstrap first admin if `users` table is empty |
+
+---
+
+## Working style
+
+Behavioral and review guidelines for this project. Bias toward caution over speed; for trivial tasks, use judgment.
+
+## 0. Start Mode
+
+Before starting any non-trivial task, ask:
+
+**Is this a BIG, SMALL, or TRIVIAL change?**
+
+- **BIG** — full review across all sections (Architecture → Code → Tests → Performance), top 3–4 issues per section, pause for feedback after each.
+- **SMALL** — one focused question per section, keep the review concise.
+- **TRIVIAL** — skip the structured review; apply behavioral rules (§1–§5) directly.
+
+For BIG and SMALL changes, do NOT begin implementation until the plan is reviewed and approved.
+
+---
+
+## 1. Think Before Coding
+
+Don't assume. Don't hide confusion. Surface tradeoffs.
+
+- State assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them — don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+For every issue or recommendation:
+
+- Explain concrete tradeoffs
+- Give an opinionated recommendation (not a neutral summary)
+- Ask for input before proceeding
+
+---
+
+## 2. Simplicity First
+
+Minimum code that solves the problem. Nothing speculative.
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios (real edge cases are covered in §4).
+- If you write 200 lines and it could be 50, rewrite it.
+
+Test: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+---
+
+## 3. Surgical Changes
+
+Touch only what you must. Clean up only your own mess.
+
+When editing existing code:
+
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it — don't delete it.
+
+When your changes create orphans:
+
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+Test: every changed line should trace directly to the request.
+
+---
+
+## 4. Engineering Principles
+
+- **DRY** — aggressively flag _real_ duplication. Do not pre-abstract for hypothetical reuse (see §2).
+- **Well-tested code is mandatory** for non-trivial logic — better too many tests than too few. Trivial glue code does not need tests.
+- **Engineered enough** — not fragile or hacky, not over-engineered.
+- **Correctness over speed of implementation** — think hard about real edge cases.
+- **Explicit over clever.**
+
+> Note on §2 ↔ §4 tension: §2 governs _scope and abstraction_; §4 governs _correctness of what you ship_. Don't write tests for code that shouldn't exist, but don't ship untested non-trivial logic to stay "minimal."
+
+---
+
+## 5. Goal-Driven Execution
+
+Define success criteria. Loop until verified.
+
+Transform tasks into verifiable goals:
+
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria enable independent looping. Weak criteria ("make it work") require constant clarification.
+
+---
+
+## 6. Review Sections (BIG changes)
+
+### 6.1 Architecture
+
+- Overall system design and component boundaries
+- Dependency graph and coupling risks
+- Data flow and potential bottlenecks
+- Scaling characteristics and single points of failure
+- Security boundaries (auth, data access, API limits)
+
+### 6.2 Code Quality
+
+- Project structure and module organization
+- DRY violations
+- Error handling patterns and missing edge cases
+- Technical debt risks
+- Areas over- or under-engineered
+
+### 6.3 Tests
+
+- Coverage (unit, integration, e2e)
+- Quality of assertions
+- Missing edge cases
+- Untested failure scenarios
+
+### 6.4 Performance
+
+- N+1 queries or inefficient I/O
+- Memory usage risks
+- CPU hotspots or heavy code paths
+- Caching opportunities
+- Latency and scalability concerns
+
+After each section, pause and ask for feedback. Do NOT implement until confirmed.
+
+---
+
+## 7. Issue Format
+
+For each issue found, provide:
+
+1. Clear description of the problem
+2. Why it matters
+3. 2–3 options (including "do nothing" if reasonable)
+4. For each option: **effort / risk / impact / maintenance cost**
+5. Recommended option and why
+
+Then ask for approval before moving forward.
+
+---
+
+## 8. Output Style
+
+- Structured and concise
+- Opinionated recommendations, not neutral summaries
+- Focus on real risks and tradeoffs
+- Think like a Staff/Senior Engineer reviewing a production system
+
+---
+
+## 9. Documentation & Context
+
+- Use **Context7 MCP** automatically when library/API documentation, code generation, or setup/configuration steps are needed — without explicit request.
+- When generating code, verify against up-to-date docs for the specific version in use.
+- Reference project documentation in `_docs/` before making architectural decisions.
+
+---
+
+## 10. Workflow Rules
+
+- Do NOT assume priorities or timelines.
+- Pause for feedback after each review section on BIG changes.
+- Do NOT implement until confirmed.
+- Clarifying questions come **before** implementation, not after mistakes.
+
+---
+
+## 11. Agent Teams
+
+When a task is non-trivial, prefer to **dispatch a team** rather than work alone: one role plays tech-lead/router (usually the conversation itself), others do focused implementation, and a final pass re-verifies everything.
+
+### 11.1 Subagent types worth knowing
+
+- **`Explore`** — read-only search agent. Cheap. Use it before writing anything when the scope spans more than 2-3 files. It reads excerpts, not whole files — not suitable for cross-file consistency checks.
+- **`general-purpose`** — the main implementation agent (TS backend, React UI, MCP server), and the fallback for cross-cutting chores.
+- **`Plan`** — when you need an explicit step-by-step implementation plan before writing code.
+- **Specialists** (`fullstack-dev-skills:{code-reviewer,security-reviewer,test-master,…}`) — the auth/session/API-key surface and the docker-exec paths are security-sensitive; use `security-reviewer` on changes touching them.
+
+### 11.2 Orchestration patterns that work
+
+- **Parallel-by-file-boundary** (most common): N agents at once, each owning a disjoint set of files; zero merge conflicts at integration. Here that maps to: a `domain/` module vs. its routes/validators vs. UI pages vs. `mcp/`.
+- **Tech-lead sweep**: when work touches **shared** files (`schema.ts`, route registration, `openapi.ts` manifest, i18n locales), agents write only their owned files and the tech-lead applies shared-file edits post-factum.
+- **Sequential by dependency**: don't parallelise across a contract you haven't agreed yet (e.g. a new table schema must land before the worker consuming it).
+- **Scout first, plan, then implement**; **worktree isolation** (`isolation: "worktree"`) only when file overlap is unavoidable.
+
+### 11.3 Verification discipline (learned the hard way)
+
+- **Agents commonly claim "verification pending" when shell access is denied to them.** Always re-run typecheck + lint + tests as the tech-lead after each agent returns. Do not trust self-reports of "all looks correct".
+- **Agents over-report test counts.** Verify with `pnpm test` directly, not the agent's tally.
+- **Agents do not commit.** Tech-lead commits after review, grouping by logical concern.
+- **Revision cycles** — up to 10 per task, but in practice 0-1 is typical with sufficient briefing. If you hit cycle 3, the prompt was wrong; rewrite it.
+
+---
+
+## 12. Git Workflow
+
+### 12.1 Remotes — check before every push
+
+- **`mailctl`** (`friench/mailctl`) — the **working** remote: `main` tracks `mailctl/main`, issues and PRs live here.
+- **`origin`** (`friench/mailserver`) — the public release mirror. Push there only deliberately (release/`chore/public-release` work), never as a side effect.
+
+### 12.2 Branches & PRs
+
+- **`main`** — default and target branch. Feature branches `<type>/<short-name>` (`feat/mcp-coverage`, `fix/security-hardening`, `refactor/service-layer`, `infra/deployment-hardening`).
+- PRs go to `main` on `mailctl` and are **squash-merged** (linear history; the squash title keeps the `(#N)` suffix). Merge is the owner's call.
+- Direct pushes to `main` have happened for urgent deploy-fixes only; the default path is a PR.
+
+### 12.3 CI & commits
+
+- [ci.yml](./.github/workflows/ci.yml) runs on push/PR to `main`: `pnpm lint`, `format:check`, API + UI `typecheck`, `test`, `build` (all in `mailserver-api/`). Green CI before merge; reproduce failures locally with the same commands — don't debug by re-pushing.
+- Conventional-Commits-style prefixes (`feat`, `fix`, `chore`, `refactor`, `perf`, `infra`); subjects may be in Russian — match the existing style.
+- Do NOT append the `Co-Authored-By: Claude ...` trailer (or any Claude/Anthropic co-author line) to commit messages. End the commit message at the actual content.
+
+---
+
+## 13. Skills
+
+Invoke via the Skill tool (or `/<name>`). Available in sessions on this host:
+
+### 13.1 User-level (`~/.claude/skills/`, available in every session)
+
+- **`apple-design`** — Apple-style interface design and fluid motion for the web: gestures, spring animations, sheets/drawers, translucency, typography, reduced-motion. Use when building or reviewing the React dashboard (`mailserver-api/ui/`).
+- **`github-issues`** — gh CLI + Projects-v2 board mechanics on this host. Use for any work on the `friench/mailctl` issue tracker.
+- **`agent-loop`** — supervised board-driven iteration; project config in [AGENT_LOOP.md](./AGENT_LOOP.md) (check its launch prerequisites before starting a loop).
+- **`drift`** — autonomous discovery mode (no code changes; findings become `drift`-labeled issues in `friench/mailctl`); project config in [DRIFT.md](./DRIFT.md).
+- **`humanize-text`** — rewrite text into a natural human voice (README, release notes).
+- **agentmemory suite** — `recall`, `remember`, `recap`, `handoff`, `session-history`, `commit-context`, `commit-history`, `forget`. Use `handoff`/`recall` at session start to pick up prior context; `remember` for decisions worth keeping.
+
+### 13.2 Project-level ([.claude/skills/](./.claude/skills/))
+
+- **`drizzle`** — Drizzle ORM patterns for this repo (schema in `src/db/schema.ts`, generated SQL migrations in `drizzle/`). Use for any schema/migration work.
