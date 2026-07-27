@@ -35,3 +35,4 @@ nginx/nginx_secrets/
 # Claude Code runtime
 .claude/scheduled_tasks.lock
 .claude/*.lock
+.claude/drift/
