@@ -36,6 +36,31 @@ describe('parseJunkFetch', () => {
     });
   });
 
+  it('parses Dovecot 2.4 output (maildir guid, bare empty header)', () => {
+    // Captured from docker-mailserver 16.0.1 (Dovecot 2.4.1), SpamAssassin off.
+    const dump = [
+      'uid: 1',
+      'guid: 1790670967.M389539P2907.mail.example.org,S=1154,W=1180',
+      'size.physical: 1154',
+      'date.received: 2026-09-29 08:36:07',
+      'hdr.from: smoke@example.org',
+      'hdr.subject: dms16 smoke',
+      'hdr.x-spam-score:',
+      '',
+    ].join('\n');
+    expect(parseJunkFetch(dump)).toEqual([
+      {
+        uid: 1,
+        guid: '1790670967.M389539P2907.mail.example.org,S=1154,W=1180',
+        from: 'smoke@example.org',
+        subject: 'dms16 smoke',
+        date: '2026-09-29 08:36:07',
+        sizeBytes: 1154,
+        score: null,
+      },
+    ]);
+  });
+
   it('leaves score null when the header is absent or empty', () => {
     const msgs = parseJunkFetch(SAMPLE);
     expect(msgs[1]!.score).toBeNull();
