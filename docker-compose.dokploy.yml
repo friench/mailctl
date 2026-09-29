@@ -20,7 +20,7 @@ x-logging: &default-logging
 
 services:
   mailserver:
-    image: ghcr.io/docker-mailserver/docker-mailserver:15.1.0
+    image: ghcr.io/docker-mailserver/docker-mailserver:${DMS_TAG:-15.1.0}
     container_name: mailserver
     hostname: ${MAIL_HOSTNAME}
     env_file:
