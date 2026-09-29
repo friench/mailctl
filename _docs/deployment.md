@@ -155,6 +155,10 @@ docker compose up -d
 
 Schema migrations are forward-only and idempotent; rolling back requires a DB restore.
 
+### docker-mailserver version
+
+The DMS image tag comes from `DMS_TAG` (default: the tag pinned in the compose file), so a DMS upgrade can be rolled out host by host without changing git: set `DMS_TAG` in the host's `.env` (Dokploy: the stack's environment) and redeploy. Before a major DMS upgrade, stop `mailserver` and snapshot its config, mail, state and logs volumes. Rolling back means the old tag **plus** restored volumes, because a newer Dovecot may rewrite mailbox indexes in a format the older one cannot read.
+
 ## Alternative: Deploying with Dokploy
 
 If your server already runs [Dokploy](https://dokploy.com), reuse its Traefik + Let's Encrypt instead of the bundled `nginx-certbot`. The repo ships a Dokploy-ready stack:
