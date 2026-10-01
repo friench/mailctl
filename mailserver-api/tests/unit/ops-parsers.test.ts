@@ -51,6 +51,15 @@ bar@example.org             1 pop3  (22222)                (203.0.113.9)`;
     expect(sessions[1]!.proto).toBe('pop3');
   });
 
+  it('parses Dovecot 2.4 output (header says "service", not "proto")', () => {
+    // Captured from docker-mailserver 16.0.1 (Dovecot 2.4.1).
+    const dump = `username              # service (pids) (ips)
+smoke@example.org 1 imap    (2909) (172.19.0.1)`;
+    expect(parseDoveadmWho(dump)).toEqual([
+      { user: 'smoke@example.org', connections: 1, proto: 'imap', ips: ['172.19.0.1'] },
+    ]);
+  });
+
   it('returns empty for no sessions', () => {
     expect(parseDoveadmWho('username # proto (pids) (ips)\n')).toEqual([]);
     expect(parseDoveadmWho('')).toEqual([]);
