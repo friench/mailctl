@@ -341,13 +341,16 @@ When a task is non-trivial, prefer to **dispatch a team** rather than work alone
 
 ### 12.2 Branches & PRs
 
-- **`main`** — default and target branch. Feature branches `<type>/<short-name>` (`feat/mcp-coverage`, `fix/security-hardening`, `refactor/service-layer`, `infra/deployment-hardening`).
-- PRs go to `main` on `mailctl` and are **squash-merged** (linear history; the squash title keeps the `(#N)` suffix). Merge is the owner's call.
-- Direct pushes to `main` have happened for urgent deploy-fixes only; the default path is a PR.
+- **`dev`** — the working branch and target for all feature PRs (since 2026-09-29). Feature branches `<type>/<short-name>` (`feat/mcp-coverage`, `fix/security-hardening`, `refactor/service-layer`, `infra/deployment-hardening`) are cut from `dev`.
+- **`main`** — what gets deployed. Dokploy stacks build from `main` (the syncup pilot on fr-hbd02 auto-deploys on every push), so nothing lands there except through a `dev` → `main` promotion PR.
+- Feature → `dev`: **squash-merged** (linear history; the squash title keeps the `(#N)` suffix).
+- `dev` → `main`: **"Create a merge commit"**, never squash. Squash creates a new commit on `main` with the same content, so the two branches diverge: later promotion PRs re-list old commits and can show false conflicts. If it happens anyway, merge `main` back into `dev` (an empty-diff merge, no force-push).
+- **Never delete `dev`** — don't click "Delete branch" on a `dev` → `main` PR.
+- Merge is the owner's call. Direct pushes to `main` have happened for urgent deploy-fixes only; the default path is a PR.
 
 ### 12.3 CI & commits
 
-- [ci.yml](./.github/workflows/ci.yml) runs on push/PR to `main`: `pnpm lint`, `format:check`, API + UI `typecheck`, `test`, `build` (all in `mailserver-api/`). Green CI before merge; reproduce failures locally with the same commands — don't debug by re-pushing.
+- [ci.yml](./.github/workflows/ci.yml) runs on push/PR to `main` and `dev`: `pnpm lint`, `format:check`, API + UI `typecheck`, `test`, `build` (all in `mailserver-api/`). Green CI before merge; reproduce failures locally with the same commands — don't debug by re-pushing.
 - Conventional-Commits-style prefixes (`feat`, `fix`, `chore`, `refactor`, `perf`, `infra`); subjects may be in Russian — match the existing style.
 - Do NOT append the `Co-Authored-By: Claude ...` trailer (or any Claude/Anthropic co-author line) to commit messages. End the commit message at the actual content.
 
