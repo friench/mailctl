@@ -15,8 +15,10 @@
 - **Доска:** ещё не создана (см. «Предпосылки запуска»). Issues живут в
   `friench/mailctl`; после создания доски вписать сюда номер
   (`gh project item-list <N> --owner friench`).
-- **`TARGET_BRANCH = main`** — она же default-ветка `mailctl`, поэтому
-  `Closes #N` в PR закрывает issue при мердже. PR **squash**-мерджит человек.
+- **`TARGET_BRANCH = dev`** (с 2026-09-29; `main` деплоится в прод, туда
+  только PR `dev` → `main` обычным merge commit — см. CLAUDE.md §12.2). PR
+  **squash**-мерджит человек. `dev` не default-ветка, поэтому `Closes #N`
+  закроет issue только когда изменение доедет до `main` с продвижением.
 - **Verify (из `mailserver-api/`, зеркалит ci.yml):**
   1. `pnpm lint` + `pnpm format:check`
   2. `pnpm typecheck` + `pnpm --dir ui typecheck`
