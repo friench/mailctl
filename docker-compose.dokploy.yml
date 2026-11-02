@@ -109,6 +109,11 @@ services:
       context: ./mailserver-api
     container_name: mail-api
     restart: unless-stopped
+    # SMTP accounts reference their credentials by env-var NAME (smtp_accounts.user_env_var /
+    # password_env_var); in Dokploy the only place to put such values is the stack .env, so
+    # mail-api reads it too. Keys under `environment:` below still take precedence.
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       DATABASE_URL: /app/data/data.db
